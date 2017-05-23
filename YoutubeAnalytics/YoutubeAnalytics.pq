@@ -58,8 +58,8 @@ shared YoutubeAnalytics.VideoStats = () =>
     #"Expanded rows" = Table.ExpandListColumn(#"Filtered Rows1", "rows"),
     #"Added Custom2" = Table.AddColumn(#"Expanded rows", "Custom", each Table.Transpose(Table.FromList([rows], Splitter.SplitByNothing()))),
     #"Removed Columns2" = Table.RemoveColumns(#"Added Custom2",{"rows"}),
-    #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8","Column9","Column10"}, {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8","Column9", "Column10"}),
-    #"Renamed Columns" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "Date"}, {"Column2", "VideoID"}, {"Column3", "Views"}, {"Column4", "Likes"}, {"Column5", "Dislikes"}, {"Column6", "Shares"}, {"Column7", "estimatedRevenue"}, {"Column8", "comments"}, {"Column9", "subscribersGained"}, {"Column10", "subscribersLost"}}),
+    #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8"}, {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8"}),
+    #"Renamed Columns" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "Date"}, {"Column2", "VideoID"}, {"Column3", "Views"}, {"Column4", "Likes"}, {"Column5", "Dislikes"}, {"Column6", "Shares"}, {"Column7", "estimatedRevenue"}, {"Column8", "comments"}}),
     #"Changed Type" = Table.TransformColumnTypes(#"Renamed Columns",{{"comments", Int64.Type}, {"Shares", Int64.Type}, {"Dislikes", Int64.Type}, {"Likes", Int64.Type}, {"Views", Int64.Type}, {"estimatedRevenue", type number}, {"VideoID", type text}, {"Date", type date}})
 in
     #"Changed Type";
