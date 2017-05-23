@@ -1,5 +1,5 @@
 ﻿// Use this file to write queries to test your data connector
 let
-    result =YoutubeAnalytics.Data ()
+    result = YoutubeAnalytics.VideoStats ()
 in
     result
