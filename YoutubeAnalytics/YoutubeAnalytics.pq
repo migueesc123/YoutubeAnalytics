@@ -47,8 +47,16 @@ shared YoutubeAnalytics.VideoStats = () =>
     #"Converted to Table" = Table.FromList(items, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
     #"Expanded Column1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", {"kind", "etag", "id", "snippet"}, {"kind", "etag", "id", "snippet"}),
     #"Expanded id" = Table.ExpandRecordColumn(#"Expanded Column1", "id", {"videoId"}, {"videoId"}),
-    #"Filtered Rows" = Table.SelectRows(#"Expanded id", each ([videoId] <> null)),
-    videos = Text.Combine(List.Transform(#"Filtered Rows"[videoId], Text.From), "%2C"),
+    #"Expanded snippet" = Table.ExpandRecordColumn(#"Expanded id", "snippet", {"publishedAt", "title", "description", "thumbnails", "liveBroadcastContent"}, {"publishedAt", "title", "description", "thumbnails", "liveBroadcastContent"}),
+    #"Se expandió thumbnails" = Table.ExpandRecordColumn(#"Expanded snippet", "thumbnails", {"default", "medium", "high"}, {"default", "medium", "high"}),
+    #"Se expandió high" = Table.ExpandRecordColumn(#"Se expandió thumbnails", "high", {"url"}, {"url"}),
+    #"Expanded default" = Table.ExpandRecordColumn(#"Se expandió high", "default", {"url"}, {"url.1"}),
+    #"Expanded medium" = Table.ExpandRecordColumn(#"Expanded default", "medium", {"url"}, {"url.2"}),
+    #"Renamed Columns" = Table.RenameColumns(#"Expanded medium",{{"url.1", "Default Thumbnail"}, {"url.2", "Medium Thumbnail"}, {"url", "High Thumbnail"}}),
+    #"Filtered Rows" = Table.SelectRows(#"Renamed Columns", each ([videoId] <> null)),
+    #"Removed Columns" = Table.RemoveColumns(#"Filtered Rows",{"kind", "etag"}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Removed Columns",{{"videoId", type text}, {"title", type text}, {"description", type text}, {"Default Thumbnail", type text}, {"Medium Thumbnail", type text}, {"High Thumbnail", type text}, {"liveBroadcastContent", type text}, {"publishedAt", type datetimezone}}),
+    videos = Text.Combine(List.Transform(#"Changed Type"[videoId], Text.From), "%2C"),
     #"Added Custom" =  Table.AddColumn(Countries, "Response", 
              each Json.Document(
                      Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"&channel_id&"&start-date="&StartDate&"&end-date="& EndDate &"&metrics=views%2Clikes%2Cdislikes%2Cshares%2CestimatedRevenue%2Ccomments%2CsubscribersGained%2CsubscribersLost&dimensions=day%2Cvideo&filters=video%3D%3D"&videos&"%3Bcountry%3D%3D"&[Country code], 
@@ -59,11 +67,11 @@ shared YoutubeAnalytics.VideoStats = () =>
     #"Added Custom2" = Table.AddColumn(#"Expanded rows", "Custom", each Table.Transpose(Table.FromList([rows], Splitter.SplitByNothing()))),
     #"Removed Columns2" = Table.RemoveColumns(#"Added Custom2",{"rows"}),
     #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8"}, {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8"}),
-    #"Renamed Columns" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "Date"}, {"Column2", "VideoID"}, {"Column3", "Views"}, {"Column4", "Likes"}, {"Column5", "Dislikes"}, {"Column6", "Shares"}, {"Column7", "estimatedRevenue"}, {"Column8", "comments"}}),
-    #"Changed Type" = Table.TransformColumnTypes(#"Renamed Columns",{{"comments", Int64.Type}, {"Shares", Int64.Type}, {"Dislikes", Int64.Type}, {"Likes", Int64.Type}, {"Views", Int64.Type}, {"estimatedRevenue", type number}, {"VideoID", type text}, {"Date", type date}})
+    #"Renamed Columns1" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "Date"}, {"Column2", "VideoID"}, {"Column3", "Views"}, {"Column4", "Likes"}, {"Column5", "Dislikes"}, {"Column6", "Shares"}, {"Column7", "estimatedRevenue"}, {"Column8", "comments"}}),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Renamed Columns1",{{"comments", Int64.Type}, {"Shares", Int64.Type}, {"Dislikes", Int64.Type}, {"Likes", Int64.Type}, {"Views", Int64.Type}, {"estimatedRevenue", type number}, {"VideoID", type text}, {"Date", type date}})
 in
-    #"Changed Type";
-    
+    #"Changed Type1";
+       
     
 // Data Source Kind description
 YoutubeAnalytics = [
