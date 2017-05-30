@@ -17,6 +17,7 @@ scopes = {
 "yt-analytics.readonly",  
 "youtube.readonly"
 };
+
 Value.IfNull = (a, b) => if a <> null then a else b;
 
 GetScopeString = (scopes as list, optional scopePrefix as text) as text =>
@@ -33,6 +34,7 @@ shared NavigationTable.Simple = () =>
     let
         objects = #table(
             {"Name",       "Key",        "Data",                           "ItemKind", "ItemName", "IsLeaf"},{
+            {"Channel",      "YoutubeAnalytics.ChannelInfo",      YoutubeAnalytics.ChannelInfo(), "Table",    "Table",    true},
             {"Videos",      "YoutubeAnalytics.Videos",      YoutubeAnalytics.Videos(), "Table",    "Table",    true},
             {"Countries",      "YoutubeAnalytics.Countries",      YoutubeAnalytics.Countries(), "Table",    "Table",    true},            
             {"Video Stats", "YoutubeAnalytics.VideoStats", YoutubeAnalytics.VideoStats(),       "Function", "Function", true},
@@ -42,6 +44,36 @@ shared NavigationTable.Simple = () =>
     in
         NavTable;
  
+ [DataSource.Kind="YoutubeAnalytics"]
+shared YoutubeAnalytics.ChannelInfo = () as table =>
+   
+let
+    Source = Web.Contents("https://www.googleapis.com/youtube/v3/channels?id=UCy_OwhQ_foCbaSKhMhuvgRw&part=snippet,statistics"),
+    #"Imported JSON" = Json.Document(Source),
+    items = #"Imported JSON"[items],
+    #"Converted to Table" = Table.FromList(items, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    #"Expanded Column1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", {"kind", "etag", "id", "snippet", "statistics"}, {"kind", "etag", "id", "snippet", "statistics"}),
+    #"Removed Columns" = Table.RemoveColumns(#"Expanded Column1",{"kind", "etag", "id"}),
+    #"Expanded snippet" = Table.ExpandRecordColumn(#"Removed Columns", "snippet", {"title", "description", "customUrl", "publishedAt", "thumbnails", "localized", "country"}, {"title", "description", "customUrl", "publishedAt", "thumbnails", "localized", "country"}),
+    #"Renamed Columns" = Table.RenameColumns(#"Expanded snippet",{{"title", "Channel Name"}, {"description", "Channel Description"}}),
+    #"Expanded thumbnails" = Table.ExpandRecordColumn(#"Renamed Columns", "thumbnails", {"default", "medium", "high"}, {"default", "medium", "high"}),
+    #"Removed Columns1" = Table.RemoveColumns(#"Expanded thumbnails",{"localized"}),
+    #"Renamed Columns1" = Table.RenameColumns(#"Removed Columns1",{{"country", "Country"}}),
+    #"Expanded default" = Table.ExpandRecordColumn(#"Renamed Columns1", "default", {"url"}, {"url"}),
+    #"Renamed Columns2" = Table.RenameColumns(#"Expanded default",{{"url", "Default Channel Avatar"}}),
+    #"Expanded medium" = Table.ExpandRecordColumn(#"Renamed Columns2", "medium", {"url"}, {"url"}),
+    #"Renamed Columns3" = Table.RenameColumns(#"Expanded medium",{{"url", "Medium Channel Avatar"}}),
+    #"Expanded high" = Table.ExpandRecordColumn(#"Renamed Columns3", "high", {"url"}, {"url"}),
+    #"Renamed Columns4" = Table.RenameColumns(#"Expanded high",{{"url", "HighChannel Avatar"}}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Renamed Columns4",{{"HighChannel Avatar", type text}, {"Medium Channel Avatar", type text}, {"Default Channel Avatar", type text}, {"customUrl", type text}, {"Channel Description", type text}, {"Channel Name", type text}, {"publishedAt", type datetimezone}}),
+    #"Added Custom" = Table.AddColumn(#"Changed Type", "Custom Channel url", each "https://www.youtube.com/"&[customUrl]),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Added Custom",{{"Custom Channel url", type text}}),
+    #"Removed Columns2" = Table.RemoveColumns(#"Changed Type1",{"customUrl"}),
+    #"Expanded statistics" = Table.ExpandRecordColumn(#"Removed Columns2", "statistics", {"viewCount", "subscriberCount", "videoCount"}, {"viewCount", "subscriberCount", "videoCount"}),
+    #"Changed Type2" = Table.TransformColumnTypes(#"Expanded statistics",{{"viewCount", Int64.Type}, {"subscriberCount", Int64.Type}, {"videoCount", Int64.Type}})
+in
+    #"Changed Type2";
+
 [DataSource.Kind="YoutubeAnalytics"]
 shared YoutubeAnalytics.VideoStats = (optional StartDate as date, optional EndDate as date) as table =>
   let
@@ -65,6 +97,8 @@ in
 
 [DataSource.Kind="YoutubeAnalytics"]
 shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional EndDate as date) as table =>
+ ///*****Data for "Subscribers lost" and "Subscribers" is not correctly tracked between August 20, 2013 and August 23, 2013
+ ////*****Data for "Subscribers gained", "Subscribers lost", and "Subscribers" is not correctly tracked between January 13, 2015 and January 15, 2015.
   let
       Start = Date.ToText ( StartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( EndDate, "yyyy-MM-dd"),
