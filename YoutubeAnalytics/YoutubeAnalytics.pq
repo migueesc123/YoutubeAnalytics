@@ -1,8 +1,8 @@
 ﻿section YoutubeAnalytics;
 
-appKey="788332736108-vd8drvbcvvucv144mk3otrins2s95quc.apps.googleusercontent.com";
-appSecret="9jc_XxF3E4XAHistah87vfpg";
-redirectUrl = "http://[::1]:8080";
+appKey="788332736108-cl3ihsde871pdrp79iem1kpg2fq2v3qq.apps.googleusercontent.com";
+appSecret="e5bL8yQ-yuBf46Skt8EltCeP";
+redirectUrl = "https://oauth.powerbi.com/views/oauthredirect.html";
 token_uri = "https://accounts.google.com/o/oauth2/token";
 authorize_uri = "https://accounts.google.com/o/oauth2/auth";
 logout_uri = "https://accounts.google.com/logout";
@@ -10,6 +10,7 @@ channel_id = "UCy_OwhQ_foCbaSKhMhuvgRw";
 
 windowWidth = 720;
 windowHeight = 1024;
+
 // See https://developers.google.com/identity/protocols/googlescopes for scopes 
 scope_prefix = "https://www.googleapis.com/auth/";
 scopes = {
@@ -75,7 +76,7 @@ in
     #"Changed Type2";
 
 [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.VideoStats = (optional StartDate as date, optional EndDate as date) as table =>
+shared YoutubeAnalytics.VideoStats = (optional StartDate as date, optional EndDate as date)  =>
   let
       Start = Date.ToText ( StartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( EndDate, "yyyy-MM-dd"),
@@ -91,9 +92,13 @@ shared YoutubeAnalytics.VideoStats = (optional StartDate as date, optional EndDa
     #"Removed Columns2" = Table.RemoveColumns(#"Added Custom2",{"rows"}),
     #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8","Column9","Column10","Column11","Column12","Column13","Column14","Column15"}, {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8","Column9","Column10","Column11","Column12","Column13","Column14","Column15"}),
     #"Renamed Columns1" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "Date"}, {"Column2", "VideoID"}, {"Column3", "Views"}, {"Column4", "Likes"}, {"Column5", "Dislikes"}, {"Column6", "Shares"}, {"Column7", "estimatedRevenue"}, {"Column8", "comments"},{"Column9", "averageViewDuration"},{"Column10", "estimatedMinutesWatched"},{"Column11", "adImpressions"},{"Column12", "cpm"},{"Column13", "averageViewPercentage"},{"Column14", "subscribersGained"},{"Column15", "subscribersLost"}}),
-    #"Changed Type1" = Table.TransformColumnTypes(#"Renamed Columns1",{{"comments", Int64.Type}, {"Shares", Int64.Type}, {"Dislikes", Int64.Type}, {"Likes", Int64.Type}, {"Views", Int64.Type}, {"estimatedRevenue", type number}, {"VideoID", type text}, {"Date", type date},{"averageViewDuration", type number},{"estimatedMinutesWatched", type number},{"adImpressions", type number},{"cpm", type number},{"averageViewPercentage", type number},{"subscribersGained", type number},{"subscribersLost", type number}})
+    #"Changed Type1" = Table.TransformColumnTypes(#"Renamed Columns1",{{"comments", Int64.Type}, {"Shares", Int64.Type}, {"Dislikes", Int64.Type}, {"Likes", Int64.Type}, {"Views", Int64.Type}, {"estimatedRevenue", type number}, {"VideoID", type text}, {"Date", type date},{"averageViewDuration", type number},{"estimatedMinutesWatched", type number},{"adImpressions", type number},{"cpm", type number},{"averageViewPercentage", type number},{"subscribersGained", type number},{"subscribersLost", type number}}),
+    result = if StartDate = null  and EndDate =null then Error.Record("Parameters Issue", "StartDate and EndDate can not be null", "StartDate = null & EndDate = null") else 
+           if StartDate = null then Error.Record("Parameters Issue", "StartDate can not be null", "StartDate = null") else 
+           if EndDate = null then Error.Record("Parameters Issue", "EndDate can not be null", "EndDate = null") else
+           if Number.From(StartDate) > Number.From(EndDate) then Error.Record("Parameters Issue","StartDate can't be after EndDate", "StartDate > EndDate") else #"Changed Type1"
 in
-    #"Changed Type1";
+    result;
 
 [DataSource.Kind="YoutubeAnalytics"]
 shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional EndDate as date) as table =>
