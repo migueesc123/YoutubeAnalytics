@@ -14,10 +14,8 @@ windowHeight = 1024;
 scope_prefix = "https://www.googleapis.com/auth/";
 scopes = {
 "yt-analytics-monetary.readonly", 
-"yt-analytics.readonly", 
-"youtubepartner", 
-"youtube.readonly",
-"youtube"
+"yt-analytics.readonly",  
+"youtube.readonly"
 };
 Value.IfNull = (a, b) => if a <> null then a else b;
 
