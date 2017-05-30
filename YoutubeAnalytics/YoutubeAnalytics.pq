@@ -37,11 +37,9 @@ GetScopeString = (scopes as list, optional scopePrefix as text) as text =>
 [DataSource.Kind="YoutubeAnalytics", Publish="YoutubeAnalytics.Publish"]
 shared YoutubeAnalytics.VideoStats = () =>
   let
-     key = Extension.CurrentCredential()[access_token],
     MainTable = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("LdRbcqMwEAXQveR7NmEECAwiiiXw2KnsfxuTmtNft8Dd9yXh7++P2/zx8+cX/oL9P4xvTw2M4BOs4Atk8AAFPMEJOsA54BwWgHoYwAtMIBbuAPWAbOBlYGK4AbLDBVhaY/IA7A5CD6IkCxtLiVDCubGULHR2k5YSzqS6lAC9LVjopdjbAGeJ+hJPykoypJBVwWhv1MSIeiQ0kZ0INVGyXibUkz4n1c3IZuszzpmX2UKWtkZokBWSqWecI8iqy1hysGgpy54rEDPzkrnOisyyZ9kXIwu9i/picpFhQba6UqvfVnprHL8mVj5XZCtnK4W7l3cG7ybvcYwOYPNyk28zuVHYuN5E2fncncPuXu8M7hZ2+XZkOxO7KIVska/gLBSKvYK6yFCsFwdQpC2ECs5XjLims7RFS8XtKaorYhZ2iyhFBcXe4eVB4dDEwcuB7LBwyHfgPEQ5WDpcqRLrQn9SqLJXoSsvlWzFUjVRUVfZqwyVlyp05fPL+sPCg96Dl0f8a9hryDZke9QT30NcRS+fnDUvG71GqFl/xIiFFgrxpTqOJm1TVnNfGoPv+OKCBUxxl2LPMTYxm4+5OYAmbZKo6axL2012k91IZ7Az2Cl0Xrp8XbBOr8ve5esu5mn9ZP4WfxCCncyf9k6WTiYux3FZuAhdyC71PJ3DxO7L5BvZW7D3L9nPPw==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type text) meta [Serialized.Text = true]) in type table [#"Country code" = _t]),
     Countries = Table.TransformColumns(MainTable,{},Text.Lower),
-    Source = Web.Contents("https://www.googleapis.com/youtube/v3/search?channelId=UCy_OwhQ_foCbaSKhMhuvgRw&part=snippet,id&order=date&maxResults=50", 
-    [Headers= [Authorization="Bearer " & key], ManualStatusHandling = {400} ]),
+    Source = Web.Contents("https://www.googleapis.com/youtube/v3/search?channelId=UCy_OwhQ_foCbaSKhMhuvgRw&part=snippet,id&order=date&maxResults=50"),
     #"Imported JSON" = Json.Document(Source),
     items = #"Imported JSON"[items],
     #"Converted to Table" = Table.FromList(items, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
@@ -59,8 +57,7 @@ shared YoutubeAnalytics.VideoStats = () =>
     videos = Text.Combine(List.Transform(#"Changed Type"[videoId], Text.From), "%2C"),
     #"Added Custom" =  Table.AddColumn(Countries, "Response", 
              each Json.Document(
-                     Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"&channel_id&"&start-date="&StartDate&"&end-date="& EndDate &"&metrics=views%2Clikes%2Cdislikes%2Cshares%2CestimatedRevenue%2Ccomments%2CsubscribersGained%2CsubscribersLost&dimensions=day%2Cvideo&filters=video%3D%3D"&videos&"%3Bcountry%3D%3D"&[Country code], 
-[Headers= [Authorization="Bearer "& key]]))),
+                     Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"&channel_id&"&start-date="&StartDate&"&end-date="& EndDate &"&metrics=views%2Clikes%2Cdislikes%2Cshares%2CestimatedRevenue%2Ccomments%2CsubscribersGained%2CsubscribersLost&dimensions=day%2Cvideo&filters=video%3D%3D"&videos&"%3Bcountry%3D%3D"&[Country code]))),
 #"Expanded Custom.1" = Table.ExpandRecordColumn(#"Added Custom", "Response", {"rows"}, {"rows"}),
     #"Filtered Rows1" = Table.SelectRows(#"Expanded Custom.1", each [rows] <> null),
     #"Expanded rows" = Table.ExpandListColumn(#"Filtered Rows1", "rows"),
