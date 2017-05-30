@@ -2,7 +2,7 @@
 
 appKey="788332736108-vd8drvbcvvucv144mk3otrins2s95quc.apps.googleusercontent.com";
 appSecret="9jc_XxF3E4XAHistah87vfpg";
-redirectUrl = "http://127.0.0.1:81";
+redirectUrl = "http://[::1]:8080";
 token_uri = "https://accounts.google.com/o/oauth2/token";
 authorize_uri = "https://accounts.google.com/o/oauth2/auth";
 logout_uri = "https://accounts.google.com/logout";
@@ -17,8 +17,7 @@ scopes = {
 "yt-analytics.readonly", 
 "youtubepartner", 
 "youtube.readonly",
-"youtube",
-"youtubepartner"
+"youtube"
 };
 Value.IfNull = (a, b) => if a <> null then a else b;
 
@@ -38,7 +37,8 @@ shared NavigationTable.Simple = () =>
             {"Name",       "Key",        "Data",                           "ItemKind", "ItemName", "IsLeaf"},{
             {"Videos",      "YoutubeAnalytics.Videos",      YoutubeAnalytics.Videos(), "Table",    "Table",    true},
             {"Countries",      "YoutubeAnalytics.Countries",      YoutubeAnalytics.Countries(), "Table",    "Table",    true},            
-            {"Video Stats", "YoutubeAnalytics.VideoStats", YoutubeAnalytics.VideoStats,       "Function", "Function", true}
+            {"Video Stats", "YoutubeAnalytics.VideoStats", YoutubeAnalytics.VideoStats(),       "Function", "Function", true},
+            {"Daily Subscribers", "YoutubeAnalytics.DailySubscribers", YoutubeAnalytics.DailySubscribers(),       "Function", "Function", true}
             }),
         NavTable = Table.ToNavigationTable(objects, {"Key"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf")
     in
@@ -52,15 +52,36 @@ shared YoutubeAnalytics.VideoStats = (optional StartDate as date, optional EndDa
      videos = Text.Combine(List.Transform(YoutubeAnalytics.Videos()[videoId], Text.From), "%2C"),
     #"Added Custom" =  Table.AddColumn(Table.TransformColumns(Table.SelectColumns(YoutubeAnalytics.Countries(),{"Country code"}),{},Text.Lower) , "Response", 
              each Json.Document(
-                     Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"&channel_id&"&start-date="&Start&"&end-date="& End &"&metrics=views%2Clikes%2Cdislikes%2Cshares%2CestimatedRevenue%2Ccomments%2CaverageViewDuration%2CestimatedMinutesWatched&dimensions=day%2Cvideo&filters=video%3D%3D"&videos&"%3Bcountry%3D%3D"&[Country code]))),
+                     Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"&channel_id&"&start-date="&Start&"&end-date="& End &"&metrics=views%2Clikes%2Cdislikes%2Cshares%2CestimatedRevenue%2Ccomments%2CaverageViewDuration%2CestimatedMinutesWatched%2CadImpressions%2Ccpm%2CaverageViewPercentage%2CsubscribersGained%2CsubscribersLost&dimensions=day%2Cvideo&filters=video%3D%3D"&videos&"%3Bcountry%3D%3D"&[Country code]))),
+///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets#viewerPercentage
 #"Expanded Custom.1" = Table.ExpandRecordColumn(#"Added Custom", "Response", {"rows"}, {"rows"}),
     #"Filtered Rows1" = Table.SelectRows(#"Expanded Custom.1", each [rows] <> null),
     #"Expanded rows" = Table.ExpandListColumn(#"Filtered Rows1", "rows"),
     #"Added Custom2" = Table.AddColumn(#"Expanded rows", "Custom", each Table.Transpose(Table.FromList([rows], Splitter.SplitByNothing()))),
     #"Removed Columns2" = Table.RemoveColumns(#"Added Custom2",{"rows"}),
-    #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8","Column9","Column10"}, {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8","Column9","Column10"}),
-    #"Renamed Columns1" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "Date"}, {"Column2", "VideoID"}, {"Column3", "Views"}, {"Column4", "Likes"}, {"Column5", "Dislikes"}, {"Column6", "Shares"}, {"Column7", "estimatedRevenue"}, {"Column8", "comments"},{"Column9", "averageViewDuration"},{"Column10", "estimatedMinutesWatched"}}),
-    #"Changed Type1" = Table.TransformColumnTypes(#"Renamed Columns1",{{"comments", Int64.Type}, {"Shares", Int64.Type}, {"Dislikes", Int64.Type}, {"Likes", Int64.Type}, {"Views", Int64.Type}, {"estimatedRevenue", type number}, {"VideoID", type text}, {"Date", type date},{"averageViewDuration", type number},{"estimatedMinutesWatched", type number}})
+    #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8","Column9","Column10","Column11","Column12","Column13","Column14","Column15"}, {"Column1", "Column2", "Column3", "Column4", "Column5", "Column6", "Column7", "Column8","Column9","Column10","Column11","Column12","Column13","Column14","Column15"}),
+    #"Renamed Columns1" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "Date"}, {"Column2", "VideoID"}, {"Column3", "Views"}, {"Column4", "Likes"}, {"Column5", "Dislikes"}, {"Column6", "Shares"}, {"Column7", "estimatedRevenue"}, {"Column8", "comments"},{"Column9", "averageViewDuration"},{"Column10", "estimatedMinutesWatched"},{"Column11", "adImpressions"},{"Column12", "cpm"},{"Column13", "averageViewPercentage"},{"Column14", "subscribersGained"},{"Column15", "subscribersLost"}}),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Renamed Columns1",{{"comments", Int64.Type}, {"Shares", Int64.Type}, {"Dislikes", Int64.Type}, {"Likes", Int64.Type}, {"Views", Int64.Type}, {"estimatedRevenue", type number}, {"VideoID", type text}, {"Date", type date},{"averageViewDuration", type number},{"estimatedMinutesWatched", type number},{"adImpressions", type number},{"cpm", type number},{"averageViewPercentage", type number},{"subscribersGained", type number},{"subscribersLost", type number}})
+in
+    #"Changed Type1";
+
+[DataSource.Kind="YoutubeAnalytics"]
+shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional EndDate as date) as table =>
+  let
+      Start = Date.ToText ( StartDate, "yyyy-MM-dd"),
+      End =  Date.ToText ( EndDate, "yyyy-MM-dd"),
+    #"Added Custom" =  Table.AddColumn(Table.TransformColumns(Table.SelectColumns(YoutubeAnalytics.Countries(),{"Country code"}),{},Text.Lower) , "Response", 
+             each Json.Document(
+                     Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"&channel_id&"&start-date="&Start&"&end-date="& End &"&metrics=subscribersGained%2CsubscribersLost&dimensions=day&filters=country%3D%3D"&[Country code]))),
+///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets#viewerPercentage
+#"Expanded Custom.1" = Table.ExpandRecordColumn(#"Added Custom", "Response", {"rows"}, {"rows"}),
+    #"Filtered Rows1" = Table.SelectRows(#"Expanded Custom.1", each [rows] <> null),
+    #"Expanded rows" = Table.ExpandListColumn(#"Filtered Rows1", "rows"),
+    #"Added Custom2" = Table.AddColumn(#"Expanded rows", "Custom", each Table.Transpose(Table.FromList([rows], Splitter.SplitByNothing()))),
+    #"Removed Columns2" = Table.RemoveColumns(#"Added Custom2",{"rows"}),
+    #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", {"Column1", "Column2", "Column3"}, {"Column1", "Column2", "Column3"}),
+    #"Renamed Columns1" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "Date"}, {"Column2", "subscribersGained"}, {"Column3", "subscribersLost"}}),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Renamed Columns1",{{"Date", type date},{"subscribersGained", type number},{"subscribersLost", type number}})
 in
     #"Changed Type1";
 
