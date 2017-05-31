@@ -178,9 +178,11 @@ YoutubeAnalytics.Publish = [
     SourceTypeImage = YoutubeAnalytics.Icons
 ];
 
+///// Youtube Official Branding https://www.youtube.com/yt/brand/downloads.html all rights reserved 
+
 YoutubeAnalytics.Icons = [
-    Icon16 = { Extension.Contents("PQExtension116.png"), Extension.Contents("PQExtension120.png"), Extension.Contents("PQExtension124.png"), Extension.Contents("PQExtension132.png") },
-    Icon32 = { Extension.Contents("PQExtension132.png"), Extension.Contents("PQExtension140.png"), Extension.Contents("PQExtension148.png"), Extension.Contents("PQExtension164.png") }
+    Icon16 = { Extension.Contents("YoutubeAnalytics16.png"), Extension.Contents("YoutubeAnalytics20.png"), Extension.Contents("YoutubeAnalytics24.png"), Extension.Contents("YoutubeAnalytics32.png") },
+    Icon32 = { Extension.Contents("YoutubeAnalytics32.png"), Extension.Contents("YoutubeAnalytics40.png"), Extension.Contents("YoutubeAnalytics48.png"), Extension.Contents("YoutubeAnalytics64.png") }
 ];
 
 StartLogin = (resourceUrl, state, display) =>
