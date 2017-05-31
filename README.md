@@ -11,4 +11,4 @@ The vision:
 # Creating your own Google API project
 In order to use this connector, you'll need to create your own Google API Project that will host your specific API credentials. 
 Be sure to check out the following video on how to create that project and how to get the credentials needed.  
-<iframe width="560" height="315" src="https://www.youtube.com/embed/6r8hrDHUv6s?ecver=1" frameborder="0" allowfullscreen></iframe>
+[![Google API Project](https://img.youtube.com/vi/6r8hrDHUv6s/0.jpg)](https://www.youtube.com/watch?v=6r8hrDHUv6s) 
