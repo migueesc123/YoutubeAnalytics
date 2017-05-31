@@ -1,7 +1,7 @@
 ﻿section YoutubeAnalytics;
 
-appKey="788332736108-cl3ihsde871pdrp79iem1kpg2fq2v3qq.apps.googleusercontent.com";
-appSecret="e5bL8yQ-yuBf46Skt8EltCeP";
+appKey="644825470271-9n6n2j6acbi0q3unqpjfsmu6o86r7l2g.apps.googleusercontent.com";
+appSecret="KFq0VKGvKgnkqlKiDEakU20R";
 redirectUrl = "https://oauth.powerbi.com/views/oauthredirect.html";
 token_uri = "https://accounts.google.com/o/oauth2/token";
 authorize_uri = "https://accounts.google.com/o/oauth2/auth";
@@ -31,7 +31,7 @@ GetScopeString = (scopes as list, optional scopePrefix as text) as text =>
 
 [DataSource.Kind="YoutubeAnalytics", Publish="YoutubeAnalytics.Publish"]
 
-shared NavigationTable.Simple = () =>
+shared YoutubeAnalytics.Navigation = () =>
     let
         objects = #table(
             {"Name",       "Key",        "Data",                           "ItemKind", "ItemName", "IsLeaf"},{
@@ -76,7 +76,7 @@ in
     #"Changed Type2";
 
 [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.VideoStats = (optional StartDate as date, optional EndDate as date)  =>
+shared YoutubeAnalytics.VideoStats = ( optional StartDate as date, optional EndDate as date)  =>
   let
       Start = Date.ToText ( StartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( EndDate, "yyyy-MM-dd"),
@@ -101,7 +101,7 @@ in
     result;
 
 [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional EndDate as date) as table =>
+shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional EndDate as date) =>
  ///*****Data for "Subscribers lost" and "Subscribers" is not correctly tracked between August 20, 2013 and August 23, 2013
  ////*****Data for "Subscribers gained", "Subscribers lost", and "Subscribers" is not correctly tracked between January 13, 2015 and January 15, 2015.
   let
@@ -118,9 +118,14 @@ shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional
     #"Removed Columns2" = Table.RemoveColumns(#"Added Custom2",{"rows"}),
     #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", {"Column1", "Column2", "Column3"}, {"Column1", "Column2", "Column3"}),
     #"Renamed Columns1" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "Date"}, {"Column2", "subscribersGained"}, {"Column3", "subscribersLost"}}),
-    #"Changed Type1" = Table.TransformColumnTypes(#"Renamed Columns1",{{"Date", type date},{"subscribersGained", type number},{"subscribersLost", type number}})
+    #"Changed Type1" = Table.TransformColumnTypes(#"Renamed Columns1",{{"Date", type date},{"subscribersGained", type number},{"subscribersLost", type number}}),
+    result = if StartDate = null  and EndDate =null then Error.Record("Parameters Issue", "StartDate and EndDate can not be null", "StartDate = null & EndDate = null") else 
+           if StartDate = null then Error.Record("Parameters Issue", "StartDate can not be null", "StartDate = null") else 
+           if EndDate = null then Error.Record("Parameters Issue", "EndDate can not be null", "EndDate = null") else
+           if Number.From(StartDate) > Number.From(EndDate) then Error.Record("Parameters Issue","StartDate can't be after EndDate", "StartDate > EndDate") else #"Changed Type1"
+
 in
-    #"Changed Type1";
+    result;
 
 
 [DataSource.Kind="YoutubeAnalytics"]
@@ -208,6 +213,7 @@ FinishLogin = (context, callbackUri, state) =>
                    TokenMethod(parts[code])
     in
         result;
+
 
 TokenMethod = (code) =>
     let

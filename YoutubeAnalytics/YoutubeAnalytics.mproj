@@ -39,28 +39,28 @@
     <Compile Include="YoutubeAnalytics.pq">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PQExtension116.png">
+    <Compile Include="YoutubeAnalytics16.png">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PQExtension120.png">
+    <Compile Include="YoutubeAnalytics20.png">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PQExtension124.png">
+    <Compile Include="YoutubeAnalytics24.png">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PQExtension132.png">
+    <Compile Include="YoutubeAnalytics32.png">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PQExtension140.png">
+    <Compile Include="YoutubeAnalytics40.png">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PQExtension148.png">
+    <Compile Include="YoutubeAnalytics48.png">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PQExtension164.png">
+    <Compile Include="YoutubeAnalytics64.png">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="PQExtension180.png">
+    <Compile Include="YoutubeAnalytics80.png">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="resources.resx">
