@@ -1,7 +1,7 @@
 ﻿section YoutubeAnalytics;
 
-appKey="644825470271-9n6n2j6acbi0q3unqpjfsmu6o86r7l2g.apps.googleusercontent.com";
-appSecret="KFq0VKGvKgnkqlKiDEakU20R";
+appKey="163337191747-llpbu679m7h93vjgsrnsta6934rjprou.apps.googleusercontent.com";
+appSecret="ivBGONHdPKstgsdNcOy6LAzl";
 redirectUrl = "https://oauth.powerbi.com/views/oauthredirect.html";
 token_uri = "https://accounts.google.com/o/oauth2/token";
 authorize_uri = "https://accounts.google.com/o/oauth2/auth";
@@ -49,7 +49,7 @@ shared YoutubeAnalytics.Navigation = () =>
 shared YoutubeAnalytics.ChannelInfo = () as table =>
    
 let
-    Source = Web.Contents("https://www.googleapis.com/youtube/v3/channels?id=UCy_OwhQ_foCbaSKhMhuvgRw&part=snippet,statistics"),
+    Source = Web.Contents("https://www.googleapis.com/youtube/v3/channels?id=" & channel_id &"&part=snippet,statistics"),
     #"Imported JSON" = Json.Document(Source),
     items = #"Imported JSON"[items],
     #"Converted to Table" = Table.FromList(items, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
@@ -110,7 +110,7 @@ shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional
     #"Added Custom" =  Table.AddColumn(Table.TransformColumns(Table.SelectColumns(YoutubeAnalytics.Countries(),{"Country code"}),{},Text.Lower) , "Response", 
              each Json.Document(
                      Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"&channel_id&"&start-date="&Start&"&end-date="& End &"&metrics=subscribersGained%2CsubscribersLost&dimensions=day&filters=country%3D%3D"&[Country code]))),
-///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets#viewerPercentage
+///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets
 #"Expanded Custom.1" = Table.ExpandRecordColumn(#"Added Custom", "Response", {"rows"}, {"rows"}),
     #"Filtered Rows1" = Table.SelectRows(#"Expanded Custom.1", each [rows] <> null),
     #"Expanded rows" = Table.ExpandListColumn(#"Filtered Rows1", "rows"),
