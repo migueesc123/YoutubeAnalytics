@@ -137,9 +137,9 @@ in
     #"Changed Type";
     
 [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.Videos = () =>
+shared YoutubeAnalytics.Videos = () as table =>
 let
-    Source = Web.Contents("https://www.googleapis.com/youtube/v3/search?channelId="& channel_id &"&part=snippet,id&order=date&maxResults=50"),
+    Source = Web.Contents("https://www.googleapis.com/youtube/v3/search?channelId="& channel_id &"&part=id,snippet&order=date&maxResults=50"),
     #"Imported JSON" = Json.Document(Source),
     items = #"Imported JSON"[items],
     #"Converted to Table" = Table.FromList(items, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
@@ -153,9 +153,17 @@ let
     #"Renamed Columns" = Table.RenameColumns(#"Expanded medium",{{"url.1", "Default Thumbnail"}, {"url.2", "Medium Thumbnail"}, {"url", "High Thumbnail"}}),
     #"Filtered Rows" = Table.SelectRows(#"Renamed Columns", each ([videoId] <> null)),
     #"Removed Columns" = Table.RemoveColumns(#"Filtered Rows",{"kind", "etag"}),
-    #"Changed Type" = Table.TransformColumnTypes(#"Removed Columns",{{"videoId", type text}, {"title", type text}, {"description", type text}, {"Default Thumbnail", type text}, {"Medium Thumbnail", type text}, {"High Thumbnail", type text}, {"liveBroadcastContent", type text}, {"publishedAt", type datetimezone}})
-    in 
-        #"Changed Type";
+    #"Changed Type" = Table.TransformColumnTypes(#"Removed Columns",{{"videoId", type text}, {"title", type text}, {"description", type text}, {"Default Thumbnail", type text}, {"Medium Thumbnail", type text}, {"High Thumbnail", type text}, {"liveBroadcastContent", type text}, {"publishedAt", type datetimezone}}),
+     AddColumn = Table.AddColumn( #"Changed Type", "MyRequest", each 
+           Json.Document( Web.Contents("https://www.googleapis.com/youtube/v3/videos?id=" & [videoId] &"&part=contentDetails"))),
+               #"Expanded MyRequest" = Table.ExpandRecordColumn(AddColumn, "MyRequest", {"items"}, {"items"}),
+    #"Expanded items" = Table.ExpandListColumn(#"Expanded MyRequest", "items"),
+    #"Expanded items1" = Table.ExpandRecordColumn(#"Expanded items", "items", {"contentDetails"}, {"contentDetails"}),
+    #"Expanded contentDetails" = Table.ExpandRecordColumn(#"Expanded items1", "contentDetails", {"duration", "dimension", "definition", "caption", "licensedContent", "projection", "hasCustomThumbnail"}, {"duration", "dimension", "definition", "caption", "licensedContent", "projection", "hasCustomThumbnail"}),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Expanded contentDetails",{{"licensedContent", type logical}, {"hasCustomThumbnail", type logical}, {"caption", type logical}, {"projection", type text}, {"definition", type text}, {"dimension", type text}, {"duration", type text}})
+in
+    #"Changed Type1";
+ 
 
 // Data Source Kind description
 YoutubeAnalytics = [
