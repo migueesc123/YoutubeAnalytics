@@ -83,8 +83,8 @@ shared YoutubeAnalytics.VideoStats = ( optional StartDate as date, optional EndD
      videos = Text.Combine(List.Transform(YoutubeAnalytics.Videos()[videoId], Text.From), "%2C"),
     #"Added Custom" =  Table.AddColumn(Table.TransformColumns(Table.SelectColumns(YoutubeAnalytics.Countries(),{"Country code"}),{},Text.Lower) , "Response", 
              each Json.Document(
-                     Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"&channel_id&"&start-date="&Start&"&end-date="& End &"&metrics=views%2Clikes%2Cdislikes%2Cshares%2CestimatedRevenue%2Ccomments%2CaverageViewDuration%2CestimatedMinutesWatched%2CadImpressions%2Ccpm%2CaverageViewPercentage%2CsubscribersGained%2CsubscribersLost&dimensions=day%2Cvideo&filters=video%3D%3D"&videos&"%3Bcountry%3D%3D"&[Country code]))),
-///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets#viewerPercentage
+                     Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"& channel_id &"&start-date="&Start&"&end-date="& End &"&metrics=views%2Clikes%2Cdislikes%2Cshares%2CestimatedRevenue%2Ccomments%2CaverageViewDuration%2CestimatedMinutesWatched%2CadImpressions%2Ccpm%2CaverageViewPercentage%2CsubscribersGained%2CsubscribersLost&dimensions=day%2Cvideo&filters=video%3D%3D"&videos&"%3Bcountry%3D%3D"&[Country code]))),
+///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets
 #"Expanded Custom.1" = Table.ExpandRecordColumn(#"Added Custom", "Response", {"rows"}, {"rows"}),
     #"Filtered Rows1" = Table.SelectRows(#"Expanded Custom.1", each [rows] <> null),
     #"Expanded rows" = Table.ExpandListColumn(#"Filtered Rows1", "rows"),
@@ -137,7 +137,7 @@ in
     #"Changed Type";
     
 [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.Videos = () as table =>
+shared YoutubeAnalytics.Videos = () =>
 let
     Source = Web.Contents("https://www.googleapis.com/youtube/v3/search?channelId="& channel_id &"&part=snippet,id&order=date&maxResults=50"),
     #"Imported JSON" = Json.Document(Source),
@@ -162,7 +162,9 @@ YoutubeAnalytics = [
     Authentication = [
         OAuth = [
             StartLogin = StartLogin,
-            FinishLogin = FinishLogin
+            FinishLogin = FinishLogin,
+            Refresh=Refresh,
+            Logout=Logout
         ]
     ],
     Label = Extension.LoadString("DataSourceLabel")
@@ -216,6 +218,9 @@ FinishLogin = (context, callbackUri, state) =>
     in
         result;
 
+Refresh = (resourceUrl, refresh_token) => TokenMethod("refresh_token", refresh_token);
+
+Logout = (token) => logout_uri;
 
 TokenMethod = (code) =>
     let
