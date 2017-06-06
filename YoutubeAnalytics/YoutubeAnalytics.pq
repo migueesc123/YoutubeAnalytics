@@ -75,13 +75,35 @@ let
     #"Changed Type2" = Table.TransformColumnTypes(#"Expanded statistics",{{"viewCount", Int64.Type}, {"subscriberCount", Int64.Type}, {"videoCount", Int64.Type}})
 in
     #"Changed Type2";
-
+    
 [DataSource.Kind="YoutubeAnalytics"]
 shared YoutubeAnalytics.VideoStats = ( optional StartDate as date, optional EndDate as date)  =>
   let
+   Baseurl = "https://www.googleapis.com/youtube/v3/search?channelId="& channel_id & "&part=snippet,id&order=date&maxResults=50&pageToken=",
+    Source = List.Generate( ()=> 
+     [Result = null , nextPageToken =null, prevPageToken= null, Counter = 0], 
+each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 , 
+ each  [Result =  if [nextPageToken] = null and [prevPageToken] = null then 
+       Json.Document(
+            Web.Contents(
+             Baseurl)) 
+    else Json.Document(
+             Web.Contents(
+            Baseurl& [nextPageToken])), 
+  nextPageToken = try Result[nextPageToken] otherwise null, 
+ prevPageToken = try Result[prevPageToken] otherwise null,
+    Counter = [Counter] + 1 ], each [Result]),
+    #"Removed Top Items" = List.Skip(Source,1),
+    #"Converted to Table" = Table.FromList(#"Removed Top Items", Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    #"Expanded Column1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", {"items"}, {"items"}),
+    #"Expanded items" = Table.ExpandListColumn(#"Expanded Column1", "items"),
+    #"Expanded items1" = Table.ExpandRecordColumn(#"Expanded items", "items", {"id", "snippet"}, {"id", "snippet"}),
+    #"Expanded id" = Table.ExpandRecordColumn(#"Expanded items1", "id", {"videoId"}, {"videoId"}),
+    VidNoNulls = Table.SelectRows(#"Expanded id", each [videoId] <> null and [videoId] <> ""),
+       VideoList = Table.SelectRows(VidNoNulls, each ([videoId] <> null))[videoId],
       Start = Date.ToText ( StartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( EndDate, "yyyy-MM-dd"),
-     videos = Text.Combine(List.Transform(YoutubeAnalytics.Videos()[videoId], Text.From), "%2C"),
+     videos = Text.Combine(List.Transform(VideoList, Text.From), "%2C"),
     #"Added Custom" =  Table.AddColumn(Table.TransformColumns(Table.SelectColumns(YoutubeAnalytics.Countries(),{"Country code"}),{},Text.Lower) , "Response", 
              each Json.Document(
                      Web.Contents("https://www.googleapis.com/youtube/analytics/v1/reports?ids=channel%3D%3D"& channel_id &"&start-date="&Start&"&end-date="& End &"&metrics=views%2Clikes%2Cdislikes%2Cshares%2CestimatedRevenue%2Ccomments%2CaverageViewDuration%2CestimatedMinutesWatched%2CadImpressions%2Ccpm%2CaverageViewPercentage%2CsubscribersGained%2CsubscribersLost&dimensions=day%2Cvideo&filters=video%3D%3D"&videos&"%3Bcountry%3D%3D"&[Country code]))),
@@ -141,44 +163,46 @@ in
 shared YoutubeAnalytics.Videos = () as table =>
 let
     ///Code originally created by Imke http://www.thebiccountant.com/
-    baseurl = "https://www.googleapis.com/youtube/v3/search?channelId="& channel_id & "&part=snippet,id&order=date&maxResults=50&pageToken=",
+    Baseurl = "https://www.googleapis.com/youtube/v3/search?channelId="& channel_id & "&part=snippet,id&order=date&maxResults=50&pageToken=",
     Source = List.Generate( ()=> 
-     [Result= Json.Document(Web.Contents(baseurl)), nextPageToken = null, prevPageToken = null, Counter = 0], 
-each [nextPageToken] <> null or [prevPageToken] <> null or [Counter] =0, 
- each  [Result = if [nextPageToken] = null and [prevPageToken] = null then 
+     [Result = null , nextPageToken =null, prevPageToken= null, Counter = 0], 
+each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 , 
+ each  [Result =  if [nextPageToken] = null and [prevPageToken] = null then 
        Json.Document(
             Web.Contents(
-             baseurl)) 
+             Baseurl)) 
     else Json.Document(
              Web.Contents(
-            baseurl & [nextPageToken])), 
+            Baseurl& [nextPageToken])), 
   nextPageToken = try Result[nextPageToken] otherwise null, 
  prevPageToken = try Result[prevPageToken] otherwise null,
     Counter = [Counter] + 1 ], each [Result]),
-    #"Converted to Table1" = Table.FromList(Source, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
-    #"Expanded Column11" = Table.ExpandRecordColumn(#"Converted to Table1", "Column1", {"items"}, {"items"}),
-    items = Table.ExpandListColumn(#"Expanded Column11", "items"),
-    #"Expanded items2" = Table.ExpandRecordColumn(items, "items", {"id", "snippet"}, {"id", "snippet"}),
-    #"Expanded id" = Table.ExpandRecordColumn(#"Expanded items2", "id", {"videoId"}, {"videoId"}),
-    RemoveDuplicates = Table.Distinct(#"Expanded id", {"videoId"}),
-    #"Expanded snippet" = Table.ExpandRecordColumn(RemoveDuplicates, "snippet", {"publishedAt", "title", "description", "thumbnails", "liveBroadcastContent"}, {"publishedAt", "title", "description", "thumbnails", "liveBroadcastContent"}),
-    #"Se expandió thumbnails" = Table.ExpandRecordColumn(#"Expanded snippet", "thumbnails", {"default", "medium", "high"}, {"default", "medium", "high"}),
-    #"Se expandió high" = Table.ExpandRecordColumn(#"Se expandió thumbnails", "high", {"url"}, {"url"}),
-    #"Expanded default" = Table.ExpandRecordColumn(#"Se expandió high", "default", {"url"}, {"url.1"}),
-    #"Expanded medium" = Table.ExpandRecordColumn(#"Expanded default", "medium", {"url"}, {"url.2"}),
-    #"Renamed Columns" = Table.RenameColumns(#"Expanded medium",{{"url.1", "Default Thumbnail"}, {"url.2", "Medium Thumbnail"}, {"url", "High Thumbnail"}}),
-    #"Filtered Rows" = Table.SelectRows(#"Renamed Columns", each ([videoId] <> null)),
-    #"Changed Type" = Table.TransformColumnTypes(#"Filtered Rows",{{"videoId", type text}, {"title", type text}, {"description", type text}, {"Default Thumbnail", type text}, {"Medium Thumbnail", type text}, {"High Thumbnail", type text}, {"liveBroadcastContent", type text}, {"publishedAt", type datetimezone}}),
-     AddColumn = Table.AddColumn( #"Changed Type", "MyRequest", each 
+    #"Removed Top Items" = List.Skip(Source,1),
+    #"Converted to Table" = Table.FromList(#"Removed Top Items", Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    #"Expanded Column1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", {"items"}, {"items"}),
+    #"Expanded items" = Table.ExpandListColumn(#"Expanded Column1", "items"),
+    #"Expanded items1" = Table.ExpandRecordColumn(#"Expanded items", "items", {"id", "snippet"}, {"id", "snippet"}),
+    #"Expanded id" = Table.ExpandRecordColumn(#"Expanded items1", "id", {"videoId"}, {"videoId"}),
+    #"Filtered Rows" = Table.SelectRows(#"Expanded id", each [videoId] <> null and [videoId] <> ""),
+    #"Expanded snippet" = Table.ExpandRecordColumn(#"Filtered Rows", "snippet", {"publishedAt", "title", "description", "thumbnails", "liveBroadcastContent"}, {"publishedAt", "title", "description", "thumbnails", "liveBroadcastContent"}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Expanded snippet",{{"publishedAt", type datetimezone}, {"title", type text}, {"description", type text}, {"liveBroadcastContent", type text}, {"videoId", type text}}),
+    #"Expanded thumbnails" = Table.ExpandRecordColumn(#"Changed Type", "thumbnails", {"default", "medium", "high"}, {"default", "medium", "high"}),
+    default = Table.ExpandRecordColumn(#"Expanded thumbnails", "default", {"url"}, {"url"}),
+    medium = Table.ExpandRecordColumn(default, "medium", {"url"}, {"url.1"}),
+    high = Table.ExpandRecordColumn(medium, "high", {"url"}, {"url.2"}),
+    #"Changed Type1" = Table.TransformColumnTypes(high,{{"url", type text}, {"url.1", type text}, {"url.2", type text}}),
+    #"Renamed Columns" = Table.RenameColumns(#"Changed Type1",{{"url", "Default Thumbnail"}, {"url.1", "Medium Thumbnail"}, {"url.2", "High Thumbnail"}}),
+    AddColumn = Table.AddColumn( #"Renamed Columns", "MyRequest", each 
            Json.Document( Web.Contents("https://www.googleapis.com/youtube/v3/videos?id=" & [videoId] &"&part=contentDetails"))),
                #"Expanded MyRequest" = Table.ExpandRecordColumn(AddColumn, "MyRequest", {"items"}, {"items"}),
-    #"Expanded items" = Table.ExpandListColumn(#"Expanded MyRequest", "items"),
-    #"Expanded items1" = Table.ExpandRecordColumn(#"Expanded items", "items", {"contentDetails"}, {"contentDetails"}),
-    #"Expanded contentDetails" = Table.ExpandRecordColumn(#"Expanded items1", "contentDetails", {"duration", "dimension", "definition", "caption", "licensedContent", "projection", "hasCustomThumbnail"}, {"duration", "dimension", "definition", "caption", "licensedContent", "projection", "hasCustomThumbnail"}),
-    #"Changed Type1" = Table.TransformColumnTypes(#"Expanded contentDetails",{{"licensedContent", type logical}, {"hasCustomThumbnail", type logical}, {"caption", type logical}, {"projection", type text}, {"definition", type text}, {"dimension", type text}, {"duration", type duration}})
+    #"Expanded items2" = Table.ExpandListColumn(#"Expanded MyRequest", "items"),
+    #"Expanded items12" = Table.ExpandRecordColumn(#"Expanded items2", "items", {"contentDetails"}, {"contentDetails"}),
+    #"Expanded contentDetails" = Table.ExpandRecordColumn(#"Expanded items12", "contentDetails", {"duration", "dimension", "definition", "caption", "licensedContent", "projection", "hasCustomThumbnail"}, {"duration", "dimension", "definition", "caption", "licensedContent", "projection", "hasCustomThumbnail"}),
+    #"Changed Type12" = Table.TransformColumnTypes(#"Expanded contentDetails",{{"licensedContent", type logical}, {"hasCustomThumbnail", type logical}, {"caption", type logical}, {"projection", type text}, {"definition", type text}, {"dimension", type text}, {"duration", type duration}})
 in
-    #"Changed Type1";
+    #"Changed Type12";
  
+
 
 // Data Source Kind description
 YoutubeAnalytics = [
