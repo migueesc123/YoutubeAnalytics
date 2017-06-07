@@ -6,7 +6,6 @@ redirectUrl = "https://oauth.powerbi.com/views/oauthredirect.html";
 token_uri = "https://accounts.google.com/o/oauth2/token";
 authorize_uri = "https://accounts.google.com/o/oauth2/auth";
 logout_uri = "https://accounts.google.com/logout";
-channel_id = "UCy_OwhQ_foCbaSKhMhuvgRw";
 
 windowWidth = 720;
 windowHeight = 1024;
@@ -50,7 +49,7 @@ shared YoutubeAnalytics.Navigation = () =>
 shared YoutubeAnalytics.ChannelInfo = () as table =>
    
 let
-    Source = Web.Contents("https://www.googleapis.com/youtube/v3/channels?id=" & channel_id &"&part=snippet,statistics"),
+    Source = Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=snippet,statistics"),
     #"Imported JSON" = Json.Document(Source),
     items = #"Imported JSON"[items],
     #"Converted to Table" = Table.FromList(items, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
@@ -79,7 +78,8 @@ in
 [DataSource.Kind="YoutubeAnalytics"]
 shared YoutubeAnalytics.VideoStats = ( optional StartDate as date, optional EndDate as date)  =>
   let
-   Baseurl = "https://www.googleapis.com/youtube/v3/search?channelId="& channel_id & "&part=snippet,id&order=date&maxResults=50&pageToken=",
+      channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
+   Baseurl = "https://www.googleapis.com/youtube/v3/search?forMine=true&part=snippet,id&order=date&maxResults=50&pageToken=",
     Source = List.Generate( ()=> 
      [Result = null , nextPageToken =null, prevPageToken= null, Counter = 0], 
 each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 , 
@@ -128,6 +128,7 @@ shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional
  ///*****Data for "Subscribers lost" and "Subscribers" is not correctly tracked between August 20, 2013 and August 23, 2013
  ////*****Data for "Subscribers gained", "Subscribers lost", and "Subscribers" is not correctly tracked between January 13, 2015 and January 15, 2015.
   let
+      channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
       Start = Date.ToText ( StartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( EndDate, "yyyy-MM-dd"),
     #"Added Custom" =  Table.AddColumn(Table.TransformColumns(Table.SelectColumns(YoutubeAnalytics.Countries(),{"Country code"}),{},Text.Lower) , "Response", 
@@ -163,7 +164,7 @@ in
 shared YoutubeAnalytics.Videos = () as table =>
 let
     ///Code originally created by Imke http://www.thebiccountant.com/
-    Baseurl = "https://www.googleapis.com/youtube/v3/search?channelId="& channel_id & "&part=snippet,id&order=date&maxResults=50&pageToken=",
+    Baseurl = "https://www.googleapis.com/youtube/v3/search?part=snippet,id&order=date&maxResults=50&forMine=true&type=video&pageToken=",
     Source = List.Generate( ()=> 
      [Result = null , nextPageToken =null, prevPageToken= null, Counter = 0], 
 each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 , 
