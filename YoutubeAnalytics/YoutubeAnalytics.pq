@@ -79,7 +79,7 @@ in
 shared YoutubeAnalytics.VideoStats = ( optional StartDate as date, optional EndDate as date)  =>
   let
       channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
-   Baseurl = "https://www.googleapis.com/youtube/v3/search?forMine=true&part=snippet,id&order=date&maxResults=50&pageToken=",
+   Baseurl = "https://www.googleapis.com/youtube/v3/search?part=snippet,id&order=date&maxResults=50&forMine=true&type=video&pageToken=",
     Source = List.Generate( ()=> 
      [Result = null , nextPageToken =null, prevPageToken= null, Counter = 0], 
 each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 , 
