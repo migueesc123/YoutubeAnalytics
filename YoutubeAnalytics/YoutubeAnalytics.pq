@@ -1,7 +1,23 @@
-﻿section YoutubeAnalytics;
+﻿///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////
+/////////////                                                                 /////////////
+/////////////    Title: Youtube Analytics Connector for Power BI              ///////////// 
+/////////////    Created by: Miguel Escobar (@EscobarMiguel90)                ///////////// 
+/////////////    Website: https://github.com/migueesc123/YoutubeAnalytics     ///////////// 
+/////////////                                                                 ///////////// 
+///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////
 
+section YoutubeAnalytics;
+
+//// Create your own Google API Project before starting. Find out how here: https://www.youtube.com/watch?v=6r8hrDHUv6s
+//// Change the appKey and appSecret to reflect the values created from your API Project  
 appKey="163337191747-llpbu679m7h93vjgsrnsta6934rjprou.apps.googleusercontent.com";
 appSecret="ivBGONHdPKstgsdNcOy6LAzl";
+
+//// The following information manages the OAuth workflow urls. 
+// ***Do not change these values***
+
 redirectUrl = "https://oauth.powerbi.com/views/oauthredirect.html";
 token_uri = "https://accounts.google.com/o/oauth2/token";
 authorize_uri = "https://accounts.google.com/o/oauth2/auth";
@@ -10,7 +26,8 @@ logout_uri = "https://accounts.google.com/logout";
 windowWidth = 720;
 windowHeight = 1024;
 
-// See https://developers.google.com/identity/protocols/googlescopes for scopes 
+//// We define the scopes which are simply the types of access the the OAuth will provide
+//// See https://developers.google.com/identity/protocols/googlescopes for scopes 
 scope_prefix = "https://www.googleapis.com/auth/";
 scopes = {
 "yt-analytics-monetary.readonly", 
@@ -18,16 +35,6 @@ scopes = {
 "youtube.readonly"
 };
 
-Value.IfNull = (a, b) => if a <> null then a else b;
-
-
-GetScopeString = (scopes as list, optional scopePrefix as text) as text =>
-    let
-        prefix = Value.IfNull(scopePrefix, ""),
-        addPrefix = List.Transform(scopes, each prefix & _),
-        asText = Text.Combine(addPrefix, " ")
-    in
-        asText;
 
 [DataSource.Kind="YoutubeAnalytics", Publish="YoutubeAnalytics.Publish"]
 
@@ -291,6 +298,13 @@ YoutubeAnalytics.Icons = [
     Icon32 = { Extension.Contents("YoutubeAnalytics32.png"), Extension.Contents("YoutubeAnalytics40.png"), Extension.Contents("YoutubeAnalytics48.png"), Extension.Contents("YoutubeAnalytics64.png") }
 ];
 
+
+///// The OAuth Workflow coded in M has the critical components of:
+/////       StartLogin
+/////       TokenMethod, and,
+/////       FinishLogin 
+/////       that are defined below
+
 StartLogin = (resourceUrl, state, display) =>
     let
         AuthorizeUrl = authorize_uri & "?" & Uri.BuildQueryString([
@@ -344,6 +358,17 @@ TokenMethod = (code) =>
     in
         result;
 
+
+/////////////////////////////////////////////////////////////////////////////
+////////////                                                      ///////////
+////////////The following functions are a set of helper functions////////////
+////////////                                                      ///////////
+/////////////////////////////////////////////////////////////////////////////
+
+
+//// Table Navigation function provided by Microsoft. 
+//// Get the full example on how to create a Navigation Table from Microsoft here > https://github.com/Microsoft/DataConnectors/tree/master/samples/NavigationTable
+
 Table.ToNavigationTable = (
     table as table,
     keyColumns as list,
@@ -366,3 +391,18 @@ Table.ToNavigationTable = (
         navigationTable = Value.ReplaceType(table, newTableType)
     in
         navigationTable;
+
+//// Function to check if the text string exists or if it should grab the next string
+//// Get the full example on why this function was created from Microsoft here > https://github.com/Microsoft/DataConnectors/blob/fe8cb91f694e476bd70c10b9295a815d7bfc42d7/samples/MyGraph/README.md
+
+Value.IfNull = (a, b) => if a <> null then a else b;
+
+//// Function to concatenate all the scopes and create a string for them
+//// Get the full example on why this function was created from Microsoft here > https://github.com/Microsoft/DataConnectors/blob/fe8cb91f694e476bd70c10b9295a815d7bfc42d7/samples/MyGraph/README.md
+GetScopeString = (scopes as list, optional scopePrefix as text) as text =>
+    let
+        prefix = Value.IfNull(scopePrefix, ""),
+        addPrefix = List.Transform(scopes, each prefix & _),
+        asText = Text.Combine(addPrefix, " ")
+    in
+        asText;
