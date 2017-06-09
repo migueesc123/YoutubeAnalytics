@@ -45,8 +45,8 @@ shared YoutubeAnalytics.Navigation = () =>
             {"Channel",      "YoutubeAnalytics.ChannelInfo",      YoutubeAnalytics.ChannelInfo(), "Table",    "Table",    true},
             {"Videos",      "YoutubeAnalytics.Videos",      YoutubeAnalytics.Videos(), "Table",    "Table",    true},
             {"Countries",      "YoutubeAnalytics.Countries",      YoutubeAnalytics.Countries(), "Table",    "Table",    true},            
-            {"Video Stats", "YoutubeAnalytics.VideoStats", YoutubeAnalytics.VideoStats(),       "Function", "Function", true},
-            {"Daily Subscribers", "YoutubeAnalytics.DailySubscribers", YoutubeAnalytics.DailySubscribers(),       "Function", "Function", true}
+            {"Video Stats", "YoutubeAnalytics.VideoStats", YoutubeAnalytics.VideoStats,       "Function", "Function", true},
+            {"Daily Subscribers", "YoutubeAnalytics.DailySubscribers", YoutubeAnalytics.DailySubscribers,       "Function", "Function", true}
             }),
         NavTable = Table.ToNavigationTable(objects, {"Key"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf")
     in
