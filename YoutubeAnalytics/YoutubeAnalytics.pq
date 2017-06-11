@@ -26,6 +26,7 @@ logout_uri = "https://accounts.google.com/logout";
 windowWidth = 720;
 windowHeight = 1024;
 
+
 //// We define the scopes which are simply the types of access the the OAuth will provide
 //// See https://developers.google.com/identity/protocols/googlescopes for scopes 
 scope_prefix = "https://www.googleapis.com/auth/";
@@ -46,15 +47,48 @@ shared YoutubeAnalytics.Navigation = () =>
             {"Videos",      "YoutubeAnalytics.Videos",      YoutubeAnalytics.Videos(), "Table",    "Table",    true},
             {"Countries",      "YoutubeAnalytics.Countries",      YoutubeAnalytics.Countries(), "Table",    "Table",    true},            
             {"Video Stats", "YoutubeAnalytics.VideoStats", YoutubeAnalytics.VideoStats,       "Function", "Function", true},
-            {"Daily Subscribers", "YoutubeAnalytics.DailySubscribers", YoutubeAnalytics.DailySubscribers,       "Function", "Function", true}
+            {"Daily Subscribers", "YoutubeAnalytics.DailySubscribers", YoutubeAnalytics.DailySubscribers,       "Function", "Function", true},
+            {"GET Reports", "YoutubeAnalytics.GETReports", YoutubeAnalytics.GETReports,       "Function", "Function", true},
+            {"GET Public Data", "YoutubeAnalytics.GETPublicData", YoutubeAnalytics.GETPublicData,       "Function", "Function", true}
             }),
         NavTable = Table.ToNavigationTable(objects, {"Key"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf")
     in
         NavTable;
- 
+
+ [DataSource.Kind="YoutubeAnalytics"]
+ shared YoutubeAnalytics.GETReports = (optional PStartDate as date, optional PEndDate as date, optional Pmetrics as text, optional Pdimensions as text, optional Pfilters as text, optional Pmax_results as number, optional Psort as text, optional Pstart_index as number) =>
+     let
+       Start = Date.ToText ( PStartDate, "yyyy-MM-dd"),
+      End =  Date.ToText ( PEndDate, "yyyy-MM-dd"),
+     channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
+    requesturl = "https://www.googleapis.com/youtube/analytics/v1/reports",
+    GETInfo= [ 
+        ids = "channel==" & channel_id,
+        #"start-date" = Start,
+       #"end-date" = End,
+        metrics = Pmetrics,
+        dimensions=Pdimensions,
+        filters= Pfilters,
+        #"max-results"= Pmax_results,
+        sort = Psort,
+        #"start-index"= Pstart_index],
+    CleanedRecord = Record.RemoveFields( GETInfo,  Table.SelectRows( Record.ToTable ( GETInfo), each ([Value] = null))[Name]),
+    Request= 
+        Json.Document(
+                     Web.Contents( requesturl & "?" & Uri.BuildQueryString(CleanedRecord) ) )
+        in 
+            Request ;
+
+[DataSource.Kind="YoutubeAnalytics"]
+ shared YoutubeAnalytics.GETPublicData = (optional path as text) =>
+ let
+     requesturl = "https://www.googleapis.com/youtube/v3/",
+     response = Json.Document( Web.Contents ( requesturl&path) )
+     in
+         response;
+
  [DataSource.Kind="YoutubeAnalytics"]
 shared YoutubeAnalytics.ChannelInfo = () as table =>
-   
 let
     Source = Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=snippet,statistics"),
     #"Imported JSON" = Json.Document(Source),
@@ -101,14 +135,15 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
   nextPageToken = try Result[nextPageToken] otherwise null, 
  prevPageToken = try Result[prevPageToken] otherwise null,
     Counter = [Counter] + 1 ], each [Result]),
-    #"Removed Top Items" = List.Skip(Source,1),
+    #"Removed Top Items" = List.Skip(Source,1) ,
+        ///End of Imke's code. Please visit her page! http://www.thebiccountant.com/
     #"Converted to Table" = Table.FromList(#"Removed Top Items", Splitter.SplitByNothing(), null, null, ExtraValues.Error),
     #"Expanded Column1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", {"items"}, {"items"}),
     #"Expanded items" = Table.ExpandListColumn(#"Expanded Column1", "items"),
     #"Expanded items1" = Table.ExpandRecordColumn(#"Expanded items", "items", {"id"}, {"id"}),
     #"Expanded id" = Table.ExpandRecordColumn(#"Expanded items1", "id", {"videoId"}, {"videoId"}),
     VidNoNulls = Table.SelectRows(#"Expanded id", each [videoId] <> null and [videoId] <> ""),
-       VideoList = VidNoNulls[videoId],
+       VideoList = List.Buffer(VidNoNulls[videoId]),
        maxIterations = Number.RoundUp( List.Count( VideoList) /200),
        setofVideos= List.Generate( () =>
               [Result = Text.Combine(List.Transform(List.Range(VideoList,0,200), Text.From), ","), Offset = 0, Counter = 0],
@@ -123,7 +158,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
      AddingSetofVideos = Table.AddColumn(AddingCountriesColumn, "VideoIDs", each setofVideos),
      BeforeMakingTheCall = Table.ExpandListColumn(AddingSetofVideos,  "VideoIDs"),
     #"Added Custom" =  Table.AddColumn( BeforeMakingTheCall , "Response", 
-             each Json.Document(
+             each  Json.Document(
                      Web.Contents( requesturl & "?" & Uri.BuildQueryString([
        ids = "channel==" & channel_id,   
         #"start-date" = Start,
@@ -242,6 +277,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
  prevPageToken = try Result[prevPageToken] otherwise null,
     Counter = [Counter] + 1 ], each [Result]),
     #"Removed Top Items" = List.Skip(Source,1),
+    ///End of Imke's code. Please visit her page! http://www.thebiccountant.com/
     #"Converted to Table" = Table.FromList(#"Removed Top Items", Splitter.SplitByNothing(), null, null, ExtraValues.Error),
     #"Expanded Column1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", {"items"}, {"items"}),
     #"Expanded items" = Table.ExpandListColumn(#"Expanded Column1", "items"),
@@ -273,9 +309,7 @@ YoutubeAnalytics = [
     Authentication = [
         OAuth = [
             StartLogin = StartLogin,
-            FinishLogin = FinishLogin,
-            Refresh=Refresh,
-            Logout=Logout
+            FinishLogin = FinishLogin
         ]
     ],
     Label = Extension.LoadString("DataSourceLabel")
@@ -335,10 +369,6 @@ FinishLogin = (context, callbackUri, state) =>
                    TokenMethod(parts[code])
     in
         result;
-
-Refresh = (resourceUrl, refresh_token) => TokenMethod("refresh_token", refresh_token);
-
-Logout = (token) => logout_uri;
 
 TokenMethod = (code) =>
     let
