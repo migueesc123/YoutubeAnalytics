@@ -45,7 +45,8 @@ shared YoutubeAnalytics.Navigation = () =>
             {"Name",       "Key",        "Data",                           "ItemKind", "ItemName", "IsLeaf"},{
             {"Channel",      "YoutubeAnalytics.ChannelInfo",      YoutubeAnalytics.ChannelInfo(), "Table",    "Table",    true},
             {"Videos",      "YoutubeAnalytics.Videos",      YoutubeAnalytics.Videos(), "Table",    "Table",    true},
-            {"Countries",      "YoutubeAnalytics.Countries",      YoutubeAnalytics.Countries(), "Table",    "Table",    true},            
+            {"Countries",      "YoutubeAnalytics.Countries",      YoutubeAnalytics.Countries(), "Table",    "Table",    true}, 
+            {"Subscribers",      "YoutubeAnalytics.Subscribers",      YoutubeAnalytics.Subscribers(), "Table",    "Table",    true}, 
             {"Video Stats", "YoutubeAnalytics.VideoStats", YoutubeAnalytics.VideoStats,       "Function", "Function", true},
             {"Daily Subscribers", "YoutubeAnalytics.DailySubscribers", YoutubeAnalytics.DailySubscribers,       "Function", "Function", true},
             {"GET Reports", "YoutubeAnalytics.GETReports", YoutubeAnalytics.GETReports,       "Function", "Function", true},
@@ -302,7 +303,28 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
 in
     #"Changed Type12";
  
-
+ [DataSource.Kind="YoutubeAnalytics"]
+shared YoutubeAnalytics.Subscribers = () =>
+let
+    ///Code originally created by Imke http://www.thebiccountant.com/
+    Baseurl = "https://www.googleapis.com/youtube/v3/subscriptions?part=subscriberSnippet&maxResults=50&mySubscribers=true&pageToken=",
+    Source = List.Generate( ()=> 
+     [Result = null , nextPageToken =null, prevPageToken= null, Counter = 0], 
+each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 , 
+ each  [Result =  if [nextPageToken] = null and [prevPageToken] = null then 
+       Json.Document(
+            Web.Contents(
+             Baseurl)) 
+    else Json.Document(
+             Web.Contents(
+            Baseurl& [nextPageToken])), 
+  nextPageToken = try Result[nextPageToken] otherwise null, 
+ prevPageToken = try Result[prevPageToken] otherwise null,
+    Counter = [Counter] + 1 ], each [Result]),
+    #"Removed Top Items" = List.Skip(Source,1)
+    ///End of Imke's code. Please visit her page! http://www.thebiccountant.com/
+    in
+      #"Removed Top Items";
 
 // Data Source Kind description
 YoutubeAnalytics = [
@@ -312,7 +334,7 @@ YoutubeAnalytics = [
             FinishLogin = FinishLogin
         ]
     ],
-    Label = Extension.LoadString("DataSourceLabel")
+    Label =  Extension.LoadString ("DataSourceLabel")
 ];
 
 // Data Source UI publishing description
