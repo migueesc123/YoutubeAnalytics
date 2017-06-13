@@ -12,8 +12,8 @@ section YoutubeAnalytics;
 
 //// Create your own Google API Project before starting. Find out how here: https://www.youtube.com/watch?v=6r8hrDHUv6s
 //// Change the appKey and appSecret to reflect the values created from your API Project  
-appKey="163337191747-llpbu679m7h93vjgsrnsta6934rjprou.apps.googleusercontent.com";
-appSecret="ivBGONHdPKstgsdNcOy6LAzl";
+appKey= Json.Document ( Extension.Contents( "WebApp.json") ) [web][client_id];
+appSecret= Json.Document ( Extension.Contents( "WebApp.json") ) [web][client_secret];
 
 //// The following information manages the OAuth workflow urls. 
 // ***Do not change these values***
@@ -22,7 +22,7 @@ redirectUrl = "https://oauth.powerbi.com/views/oauthredirect.html";
 token_uri = "https://accounts.google.com/o/oauth2/token";
 authorize_uri = "https://accounts.google.com/o/oauth2/auth";
 logout_uri = "https://accounts.google.com/logout";
-
+                                                              
 windowWidth = 720;
 windowHeight = 1024;
 
@@ -57,28 +57,32 @@ shared YoutubeAnalytics.Navigation = () =>
         NavTable;
 
  [DataSource.Kind="YoutubeAnalytics"]
- shared YoutubeAnalytics.GETReports = (optional PStartDate as date, optional PEndDate as date, optional Pmetrics as text, optional Pdimensions as text, optional Pfilters as text, optional Pmax_results as number, optional Psort as text, optional Pstart_index as number) =>
+ shared YoutubeAnalytics.GETReports = (optional PStartDate as date, optional PEndDate as date, optional Pmetrics as text, optional Pcurrency as text, optional Pdimensions as text, optional Pfilters as text, optional Pmax_results as number , optional Psort as text, optional Pstart_index as number) =>
      let
        Start = Date.ToText ( PStartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( PEndDate, "yyyy-MM-dd"),
-     channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
+     channel_id = Json.Document( Web.Contents( "https://www.googleapis.com/youtube/v3/channels?mine=true&part=id" ) ) [items] {0} [id],
     requesturl = "https://www.googleapis.com/youtube/analytics/v1/reports",
     GETInfo= [ 
         ids = "channel==" & channel_id,
         #"start-date" = Start,
        #"end-date" = End,
         metrics = Pmetrics,
+        currency = Pcurrency,
         dimensions=Pdimensions,
         filters= Pfilters,
-        #"max-results"= Pmax_results,
+        #"max-results"= Number.ToText( Pmax_results ),
         sort = Psort,
-        #"start-index"= Pstart_index],
+        #"start-index"= Number.ToText( Pstart_index )],
     CleanedRecord = Record.RemoveFields( GETInfo,  Table.SelectRows( Record.ToTable ( GETInfo), each ([Value] = null))[Name]),
     Request= 
         Json.Document(
-                     Web.Contents( requesturl & "?" & Uri.BuildQueryString(CleanedRecord) ) )
+                     Web.Contents( requesturl & "?" & Uri.BuildQueryString(CleanedRecord) ) ),
+    ColumnHeaders = Table.FromRecords( Request[columnHeaders] )[name],
+    DataValues =  List.Transform( Request[rows], each Record.FromList( _, ColumnHeaders)),
+    OutputTable = Table.FromRecords ( DataValues)
         in 
-            Request ;
+            OutputTable;
 
 [DataSource.Kind="YoutubeAnalytics"]
  shared YoutubeAnalytics.GETPublicData = (optional path as text) =>
@@ -172,19 +176,12 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
         filters = "video=="&[VideoIDs]&";country=="&[Country code]    
     ])))),
     removingHelperColumn = Table.RemoveColumns ( #"Added Custom", {"VideoIDs"}),  
-///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets
- responseColumnHeaders = Table.ExpandRecordColumn ( Table.FromList(removingHelperColumn[Response]{0}[columnHeaders],Splitter.SplitByNothing(), null, null, ExtraValues.Error),  "Column1", {"name", "columnType", "dataType"}),
- responseColumnNames = responseColumnHeaders[name],
-#"Expanded Custom.1" = Table.ExpandRecordColumn(removingHelperColumn, "Response", {"rows"}, {"rows"}),
-    #"Filtered Rows1" = Table.SelectRows(#"Expanded Custom.1", each [rows] <> null),
-    #"Expanded rows" = Table.ExpandListColumn(#"Filtered Rows1", "rows"),
-    #"Added Custom2" = Table.AddColumn(#"Expanded rows", "Custom", each Table.Transpose(Table.FromList([rows], Splitter.SplitByNothing()))),
-    #"Removed Columns2" = Table.RemoveColumns(#"Added Custom2",{"rows"}),
-    ColumnsToExpand = Table.ColumnNames(#"Removed Columns2"[Custom]{0}),
-    #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", 
-    ColumnsToExpand, 
-    responseColumnNames),
-      #"Changed Type1" = Table.TransformColumnTypes(#"Expanded Custom",
+    columnHeaders = List.Buffer( Table.FromRecords(removingHelperColumn{0}[Response][columnHeaders])[name]),
+    DataInLists = Table.ExpandListColumn( Table.SelectRows(Table.ExpandRecordColumn(removingHelperColumn, "Response", {"rows"}, {"rows"}), each [rows] <> null),  "rows"), 
+    DatainRecords = Table.AddColumn(DataInLists, "Custom", each Record.FromList( [rows], columnHeaders)),
+    RemovingDataInList = Table.RemoveColumns(DatainRecords,{"rows"}),
+    DataInTable = Table.ExpandRecordColumn(RemovingDataInList, "Custom", columnHeaders),
+    OutputTable = Table.TransformColumnTypes(DataInTable,
       {{"comments", Int64.Type}, 
        {"shares", Int64.Type}, 
        {"dislikes", Int64.Type}, 
@@ -200,10 +197,13 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
        {"averageViewPercentage", type number},
        {"subscribersGained", type number},
        {"subscribersLost", type number}}),
+
+///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets
+
     result = if StartDate = null  and EndDate =null then Error.Record("Parameters Issue", "StartDate and EndDate can not be null", "StartDate = null & EndDate = null") else 
            if StartDate = null then Error.Record("Parameters Issue", "StartDate can not be null", "StartDate = null") else 
            if EndDate = null then Error.Record("Parameters Issue", "EndDate can not be null", "EndDate = null") else
-           if Number.From(StartDate) > Number.From(EndDate) then Error.Record("Parameters Issue","StartDate can't be after EndDate", "StartDate > EndDate") else #"Changed Type1"
+           if Number.From(StartDate) > Number.From(EndDate) then Error.Record("Parameters Issue","StartDate can't be after EndDate", "StartDate > EndDate") else OutputTable
 in
     result;
 
@@ -391,7 +391,7 @@ FinishLogin = (context, callbackUri, state) =>
                    TokenMethod(parts[code])
     in
         result;
-
+                                        
 TokenMethod = (code) =>
     let
         response = Web.Contents(token_uri, [
@@ -403,7 +403,7 @@ TokenMethod = (code) =>
                 redirect_uri = redirectUrl])),
             Headers=[#"Content-type" = "application/x-www-form-urlencoded",#"Accept" = "application/json"], ManualStatusHandling = {400}]),
         body = Json.Document(response),
-        result = if (Record.HasFields(body, {"error", "error_description"})) then 
+        result = if  (Record.HasFields(body, {"error", "error_description"})) then  
                     error Error.Record(body[error], body[error_description], body)
                  else
                     body

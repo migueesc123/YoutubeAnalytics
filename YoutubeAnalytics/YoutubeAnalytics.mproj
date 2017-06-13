@@ -66,6 +66,9 @@
     <Compile Include="resources.resx">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="WebApp.json">
+      <SubType>Content</SubType>
+    </Compile>
     <Content Include="YoutubeAnalytics.query.pq">
       <SubType>Code</SubType>
     </Content>
