@@ -15,4 +15,5 @@ Be sure to check out the following video on how to create that project and how t
 
 # Step 2: Enable the 'Custom Connector' Preview feature in Power BI Desktop
 With the new version of the Power BI Desktop you're now able to add a custom data connector way easier than before. With just a few clicks and creating a few folders you're good to go. Be sure to check out the next video on how to enable this feature and set up your folder where you'll place the custom connector.
+
 [![Enabling Power BI Custom Connectors](https://i.ytimg.com/vi/Z_g6ITj2w3w/mqdefault.jpg)](https://www.youtube.com/watch?v=Z_g6ITj2w3w)  
