@@ -10,17 +10,11 @@
 
 section YoutubeAnalytics;
 
-//// Create your own Google API Project before starting. Find out how here: https://www.youtube.com/watch?v=6r8hrDHUv6s
-//// Change the appKey and appSecret to reflect the values created from your API Project  
 appKey= Json.Document ( Extension.Contents( "WebApp.json") ) [web][client_id];
 appSecret= Json.Document ( Extension.Contents( "WebApp.json") ) [web][client_secret];
-
-//// The following information manages the OAuth workflow urls. 
-// ***Do not change these values***
-
-redirectUrl = "https://oauth.powerbi.com/views/oauthredirect.html";
-token_uri = "https://accounts.google.com/o/oauth2/token";
-authorize_uri = "https://accounts.google.com/o/oauth2/auth";
+redirectUrl = Json.Document ( Extension.Contents( "WebApp.json") )  [web][redirect_uris]{0};
+token_uri = Json.Document ( Extension.Contents( "WebApp.json") )  [web][token_uri];
+authorize_uri = Json.Document ( Extension.Contents( "WebApp.json") )  [web][auth_uri];
 logout_uri = "https://accounts.google.com/logout";
                                                               
 windowWidth = 720;
@@ -52,12 +46,77 @@ shared YoutubeAnalytics.Navigation = () =>
             {"GET Reports", "YoutubeAnalytics.GETReports", YoutubeAnalytics.GETReports,       "Function", "Function", true},
             {"GET Public Data", "YoutubeAnalytics.GETPublicData", YoutubeAnalytics.GETPublicData,       "Function", "Function", true}
             }),
-        NavTable = Table.ToNavigationTable(objects, {"Key"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf")
+        NavTable = Table.ToNavigationTable(objects, {"Key"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf") 
     in
         NavTable;
 
  [DataSource.Kind="YoutubeAnalytics"]
- shared YoutubeAnalytics.GETReports = (optional PStartDate as date, optional PEndDate as date, optional Pmetrics as text, optional Pcurrency as text, optional Pdimensions as text, optional Pfilters as text, optional Pmax_results as number , optional Psort as text, optional Pstart_index as number) =>
+ shared YoutubeAnalytics.GETReports =   Value.ReplaceType(GetReports,GetReportsType);
+   
+GetReportsType = type function (
+    optional PStartDate as (type date meta [ 
+        Documentation.FieldCaption = "Start Date",
+        Documentation.FieldDescription = "Start Date of the report"
+    ]),
+     optional PEndDate as (type date meta [ 
+        Documentation.FieldCaption = "End Date",
+        Documentation.FieldDescription = "End Date of the report"
+    ]),
+     optional Pmetrics as (type text meta [
+        Documentation.FieldCaption = "Metrics",
+        Documentation.FieldDescription = "Text to display",
+        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+    ]),
+       optional Pcurrency as (type text meta [
+        Documentation.FieldCaption = "Currency",
+        Documentation.FieldDescription = "Text to display",
+        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+    ]),
+        optional Pdimensions as (type text meta [
+        Documentation.FieldCaption = "Dimensions",
+        Documentation.FieldDescription = "Text to display",
+        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+    ]),
+      optional Pfilters as (type text meta [
+        Documentation.FieldCaption = "Filters",
+        Documentation.FieldDescription = "Text to display",
+        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+    ]),
+      optional Pmax_results as (type number meta [
+        Documentation.FieldCaption = "Max Results"
+    ]),
+         optional Psort as (type text meta [
+        Documentation.FieldCaption = "Sort",
+        Documentation.FieldDescription = "Text to display",
+        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+    ]),
+      optional Pstart_index as (type number meta [
+        Documentation.FieldCaption = "Max Results"
+    ]))
+    as table meta [
+        Documentation.Name = "Hello - Name",
+        Documentation.LongDescription = "Hello - Long Description",
+        Documentation.Examples = {[
+            Description = "Returns a table with 'Hello world' repeated 2 times",
+            Code = "HelloWorldWithDocs.Contents(""Hello world"", 2)",
+            Result = "#table({""Column1""}, {{""Hello world""}, {""Hello world""}})"
+        ],[
+            Description = "Another example, new message, new count!",
+            Code = "HelloWorldWithDocs.Contents(""Goodbye"", 1)",
+            Result = "#table({""Column1""}, {{""Goodbye""}})"
+        ]}
+    ];
+     
+    GetReports =  (
+ optional PStartDate as date, 
+ optional PEndDate as date, 
+ optional Pmetrics as text, 
+ optional Pcurrency as text, 
+ optional Pdimensions as text, 
+ optional Pfilters as text, 
+ optional Pmax_results as number , 
+ optional Psort as text, 
+ optional Pstart_index as number) as table =>
      let
        Start = Date.ToText ( PStartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( PEndDate, "yyyy-MM-dd"),
@@ -331,7 +390,9 @@ YoutubeAnalytics = [
     Authentication = [
         OAuth = [
             StartLogin = StartLogin,
-            FinishLogin = FinishLogin
+            FinishLogin = FinishLogin,
+            Refresh = Refresh,
+            Logout = Logout
         ]
     ],
     Label =  Extension.LoadString ("DataSourceLabel")
@@ -366,12 +427,10 @@ StartLogin = (resourceUrl, state, display) =>
         AuthorizeUrl = authorize_uri & "?" & Uri.BuildQueryString([
         client_id = appKey,  
         redirect_uri = redirectUrl,   
-        state="security_token",
+        state= state,
         scope = GetScopeString(scopes, scope_prefix),
         response_type = "code",
-        response_mode = "query",
-        access_type="offline",
-        login = "login"    
+        access_type = "offline"
     ])
     in
         [
@@ -388,15 +447,19 @@ FinishLogin = (context, callbackUri, state) =>
         result = if (Record.HasFields(parts, {"error", "error_description"})) then 
                     error Error.Record(parts[error], parts[error_description], parts)
                  else
-                   TokenMethod(parts[code])
+                   TokenMethod("authorization_code", parts[code])
     in
         result;
-                                        
-TokenMethod = (code) =>
+
+Refresh = (resourceUrl, refresh_token) => TokenMethod("refresh_token", refresh_token);
+
+Logout = (token) => logout_uri;
+
+TokenMethod = (grantType, code) =>
     let
         response = Web.Contents(token_uri, [
             Content = Text.ToBinary(Uri.BuildQueryString([
-                grant_type = "authorization_code",
+                grant_type = grantType,
                 client_id = appKey,
                 client_secret = appSecret,
                 code = code,
@@ -411,11 +474,11 @@ TokenMethod = (code) =>
         result;
 
 
-/////////////////////////////////////////////////////////////////////////////
-////////////                                                      ///////////
-////////////The following functions are a set of helper functions////////////
-////////////                                                      ///////////
-/////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////                                                                            ////////////
+////////////The following functions are a set of helper functions provided by Microsoft ////////////
+////////////                                                                           ////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 //// Table Navigation function provided by Microsoft. 
