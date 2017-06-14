@@ -1,4 +1,4 @@
-# YoutubeAnalytics
+# YouTube Analytics Custom Connector for Power BI
 A Microsoft Data Connector or Power Query Connector for YoutubeAnalytics data
 
 The vision:
