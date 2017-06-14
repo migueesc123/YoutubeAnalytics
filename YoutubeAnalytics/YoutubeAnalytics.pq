@@ -430,7 +430,8 @@ StartLogin = (resourceUrl, state, display) =>
         state= state,
         scope = GetScopeString(scopes, scope_prefix),
         response_type = "code",
-        access_type = "offline"
+        access_type = "offline",
+        prompt = "consent"
     ])
     in
         [
@@ -457,13 +458,18 @@ Logout = (token) => logout_uri;
 
 TokenMethod = (grantType, code) =>
     let
+        query = [
+            grant_type = grantType,
+            client_id = appKey,
+            client_secret = appSecret,
+            redirect_uri = redirectUrl
+        ],
+
+        // {CODE From Matt} added for Google API - field is "code" on initial auth, and "refresh_token" for refresh
+        queryWithCode = if (grantType = "refresh_token") then [ refresh_token = code ] else [code = code],
+
         response = Web.Contents(token_uri, [
-            Content = Text.ToBinary(Uri.BuildQueryString([
-                grant_type = grantType,
-                client_id = appKey,
-                client_secret = appSecret,
-                code = code,
-                redirect_uri = redirectUrl])),
+            Content = Text.ToBinary(Uri.BuildQueryString(query & queryWithCode)),
             Headers=[#"Content-type" = "application/x-www-form-urlencoded",#"Accept" = "application/json"], ManualStatusHandling = {400}]),
         body = Json.Document(response),
         result = if  (Record.HasFields(body, {"error", "error_description"})) then  
@@ -472,6 +478,7 @@ TokenMethod = (grantType, code) =>
                     body
     in
         result;
+
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
