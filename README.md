@@ -1,12 +1,12 @@
 # YoutubeAnalytics
 A Microsoft Data Connector or Power Query Connector for YoutubeAnalytics data
 
-Video Walkthrough coming soon!
-
 The vision:
 - A data Connector
 - A Power BI Template
 - A solution for Youtube Creators
+
+Check the steps below for a step by step walkthrough on how to get this connector working for you.
 
 # Step 1: Creating your own Google API project
 In order to use this connector, you'll need to create your own Google API Project that will host your specific API credentials. 
