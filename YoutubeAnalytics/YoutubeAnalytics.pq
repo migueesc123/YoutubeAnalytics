@@ -108,7 +108,7 @@ GetReportsType = type function (
             Code = "Check the Documentation at: https://developers.google.com/youtube/analytics/v1/data_model
             
             Example: 
-            YoutubeAnalytics.GETReports =  (
+            YoutubeAnalytics.GETReports (
              #date(2017,6,1), 
              #date(2017,6,3), 
              ""views,estimatedRevenue"", 
@@ -155,7 +155,7 @@ GetReportsType = type function (
     CleanedRecord = Record.RemoveFields( GETInfo,  Table.SelectRows( Record.ToTable ( GETInfo), each ([Value] = null))[Name]),
     Request= 
         Json.Document(
-                     Web.Contents( requesturl & "?" & Uri.BuildQueryString(CleanedRecord) ) ),
+                     Web.Contents( requesturl, [RelativePath = "?" & Uri.BuildQueryString(CleanedRecord)] ) ),
     ColumnHeaders = Table.FromRecords( Request[columnHeaders] )[name],
     DataValues =  List.Transform( Request[rows], each Record.FromList( _, ColumnHeaders)),
     OutputTable = Table.FromRecords ( DataValues)
@@ -183,7 +183,7 @@ GetReportsType = type function (
 GETPublicData = (optional path as text) =>
  let
      requesturl = "https://www.googleapis.com/youtube/v3/",
-     response = Json.Document( Web.Contents ( requesturl&path) )
+     response = Json.Document( Web.Contents ( requesturl, [RelativePath = path]) )
      in
          response;
 
@@ -257,7 +257,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
              VidsBaseurl)) 
     else Json.Document(
              Web.Contents(
-            VidsBaseurl& [nextPageToken])), 
+            VidsBaseurl, [RelativePath = [nextPageToken]])), 
   nextPageToken = try Result[nextPageToken] otherwise null, 
  prevPageToken = try Result[prevPageToken] otherwise null,
     Counter = [Counter] + 1 ], each [Result]),
@@ -285,7 +285,8 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
      BeforeMakingTheCall = Table.ExpandListColumn(AddingSetofVideos,  "VideoIDs"),
     #"Added Custom" =  Table.AddColumn( BeforeMakingTheCall , "Response", 
              each  Json.Document(
-                     Web.Contents( requesturl & "?" & Uri.BuildQueryString([
+                     Web.Contents( requesturl, 
+                     [RelativePath = "?" & Uri.BuildQueryString([
        ids = "channel==" & channel_id,   
         #"start-date" = Start,
        #"end-date" = End,
@@ -295,7 +296,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
          "cpm","averageViewPercentage","subscribersGained","subscribersLost"}, Text.From), ","),
         dimensions="day,video",
         filters = "video=="&[VideoIDs]&";country=="&[Country code]    
-    ])))),
+    ])]))),
     removingHelperColumn = Table.RemoveColumns ( #"Added Custom", {"VideoIDs"}),  
     columnHeaders = List.Buffer( Table.FromRecords(removingHelperColumn{0}[Response][columnHeaders])[name]),
     DataInLists = Table.ExpandListColumn( Table.SelectRows(Table.ExpandRecordColumn(removingHelperColumn, "Response", {"rows"}, {"rows"}), each [rows] <> null),  "rows"), 
@@ -363,7 +364,7 @@ DailySubscribers = (optional StartDate as date, optional EndDate as date) =>
       End =  Date.ToText ( EndDate, "yyyy-MM-dd"),
     #"Added Custom" =  Table.AddColumn(Table.TransformColumns(Table.SelectColumns(YoutubeAnalytics.Countries(),{"Country code"}),{},Text.Lower) , "Response", 
              each Json.Document(
-                     Web.Contents( requesturl & "?" & Uri.BuildQueryString([
+                     Web.Contents( requesturl, [RelativePath = "?" & Uri.BuildQueryString([
        ids = "channel==" & channel_id,   
         #"start-date" = Start,
        #"end-date" = End,
@@ -371,7 +372,7 @@ DailySubscribers = (optional StartDate as date, optional EndDate as date) =>
          {"subscribersGained","subscribersLost"}, Text.From), ","),
         dimensions="day",
         filters = "country=="&[Country code]    
-    ])))),
+    ])]))),
 ///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets
  responseColumnHeaders = Table.ExpandRecordColumn ( Table.FromList(#"Added Custom"[Response]{0}[columnHeaders],Splitter.SplitByNothing(), null, null, ExtraValues.Error),  "Column1", {"name", "columnType", "dataType"}),
  responseColumnNames = responseColumnHeaders[name],
@@ -418,7 +419,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
              Baseurl)) 
     else Json.Document(
              Web.Contents(
-            Baseurl& [nextPageToken])), 
+            Baseurl, [RelativePath = [nextPageToken]])), 
   nextPageToken = try Result[nextPageToken] otherwise null, 
  prevPageToken = try Result[prevPageToken] otherwise null,
     Counter = [Counter] + 1 ], each [Result]),
@@ -439,7 +440,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
     #"Changed Type1" = Table.TransformColumnTypes(high,{{"url", type text}, {"url.1", type text}, {"url.2", type text}}),
     #"Renamed Columns" = Table.RenameColumns(#"Changed Type1",{{"url", "Default Thumbnail"}, {"url.1", "Medium Thumbnail"}, {"url.2", "High Thumbnail"}}),
     AddColumn = Table.AddColumn( #"Renamed Columns", "MyRequest", each 
-           Json.Document( Web.Contents("https://www.googleapis.com/youtube/v3/videos?id=" & [videoId] &"&part=contentDetails"))),
+           Json.Document( Web.Contents("https://www.googleapis.com/youtube/v3/videos?id=", [RelativePath = [videoId] &"&part=contentDetails"]))),
                #"Expanded MyRequest" = Table.ExpandRecordColumn(AddColumn, "MyRequest", {"items"}, {"items"}),
     #"Expanded items2" = Table.ExpandListColumn(#"Expanded MyRequest", "items"),
     #"Expanded items12" = Table.ExpandRecordColumn(#"Expanded items2", "items", {"contentDetails"}, {"contentDetails"}),
