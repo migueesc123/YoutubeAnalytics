@@ -34,6 +34,7 @@ scopes = {
 [DataSource.Kind="YoutubeAnalytics", Publish="YoutubeAnalytics.Publish"]
 shared YoutubeAnalytics.Navigation = Value.ReplaceType(Navigation, NavigationType);
 
+
 NavigationType = type function () as table meta [                  
         Documentation.Name = "Youtube Analytics",
         Documentation.LongDescription = "Returns a table with key Youtube Data API and Youtube Analytics API data",
@@ -42,8 +43,8 @@ NavigationType = type function () as table meta [
             Code = "YoutubeAnalytics.Navigation () ",
             Result = "A table with key Youtube Data API and Youtube Analytics API data"
         ]}
-    ]
-;
+    ];
+
 
  Navigation = () =>
     let
@@ -63,7 +64,8 @@ NavigationType = type function () as table meta [
 
  [DataSource.Kind="YoutubeAnalytics"]
  shared YoutubeAnalytics.GETReports =   Value.ReplaceType(GetReports,GetReportsType);
-   
+ 
+
 GetReportsType = type function (
     optional PStartDate as (type date meta [ 
         Documentation.FieldCaption = "Start Date"
@@ -100,10 +102,10 @@ GetReportsType = type function (
     ]))
     as table meta [
         Documentation.Name = "Youtube Analytics API v1 GET data",
-        Documentation.LongDescription = "Read the full Youtube Analytics API documentation from Google and find how to construct your query here: https://developers.google.com/youtube/analytics/v1/data_model",
+        Documentation.LongDescription = "Read the full Youtube Analytics API documentation from Google and find how to construct your query at: https://developers.google.com/youtube/analytics/v1/data_model",
         Documentation.Examples = {[
             Description = "Quick query to get the views and estimatedRevenue in USD by day from June 1st, 2017 until June 3rd, 2017",
-            Code = "Check the Documentation here: https://developers.google.com/youtube/analytics/v1/data_model
+            Code = "Check the Documentation at: https://developers.google.com/youtube/analytics/v1/data_model
             
             Example: 
             YoutubeAnalytics.GETReports =  (
@@ -116,13 +118,14 @@ GetReportsType = type function (
              null, 
              null, 
              null)",
-                        Result = "#table({""day"",""views"",""estimatedRevenue""}, {
-                                 {#date(2017,6,1),245,10},
-                                 {#date(2017,6,2),437,45},
-                                 {#date(2017,6,3),784,148}})"
+                        Result = "#table({""day"",""views"",""estimatedRevenue""},{
+                        {""2017-06-01"",""230"",""0.4""},
+                        {""2017-06-02"",""255"",""0.403""},
+                        {""2017-06-03"",""386"",""0.772""}}))"
         ]}
     ];
-     
+
+  
     GetReports =  (
  optional PStartDate as date, 
  optional PEndDate as date, 
@@ -160,7 +163,24 @@ GetReportsType = type function (
             OutputTable;
 
 [DataSource.Kind="YoutubeAnalytics"]
- shared YoutubeAnalytics.GETPublicData = (optional path as text) =>
+ shared YoutubeAnalytics.GETPublicData =  Value.ReplaceType(GETPublicData, GETPublicDataType) ;
+ 
+ GETPublicDataType = type function (
+        optional path as ( type text meta[
+        Documentation.FieldCaption = "End Date",
+        Documentation.FieldDescription = "The End Date of the report"]
+        )) as table meta [                  
+        Documentation.Name = "YoutubeAnalytics.GETPublicData",
+        Documentation.LongDescription = "Makes a call to the Youtube Data API and returns the raw response",
+        Documentation.Examples = {[
+            Description = "Returns raw data from any of the https://www.googleapis.com/youtube/v3/ endpoints. ",
+            Code = "YoutubeAnalytics.GETPublicData(""search?part=snippet&maxResults=50&q=Power+BI"")
+            Get the full documentation at  https://developers.google.com/youtube/v3/docs/ ",
+            Result = "Raw search in Record format for the word Power BI with 50 as maximum result records."
+        ]}
+    ]; 
+
+GETPublicData = (optional path as text) =>
  let
      requesturl = "https://www.googleapis.com/youtube/v3/",
      response = Json.Document( Web.Contents ( requesturl&path) )
@@ -197,7 +217,33 @@ in
     #"Changed Type2";
      
 [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.VideoStats = ( optional StartDate as date, optional EndDate as date)  =>
+shared YoutubeAnalytics.VideoStats   = Value.ReplaceType(VideoStats, VideoStatsType);
+
+VideoStatsType = type function (
+        optional StartDate as ( type date meta[
+        Documentation.FieldCaption = "Start Date",
+        Documentation.FieldDescription = "The Start Date of the report"]),
+        optional EndDate as( type date meta[
+        Documentation.FieldCaption = "End Date",
+        Documentation.FieldDescription = "The End Date of the report"]
+        )) as table meta [                  
+        Documentation.Name = "Youtube Analytics Daily Video Activity by Country",
+        Documentation.LongDescription = "Returns a table with daily information by country and video for views,likes,dislikes,shares,estimatedRevenue,comments,
+         averageViewDuration,estimatedMinutesWatched,adImpressions,cpm,averageViewPercentage,subscribersGained, and subscribersLost",
+        Documentation.Examples = {[
+            Description = "Returns a table with daily information by country and video for views,likes,dislikes,shares,estimatedRevenue,comments,
+         averageViewDuration,estimatedMinutesWatched,adImpressions,cpm,averageViewPercentage,subscribersGained, and subscribersLost",
+            Code = "YoutubeAnalytics.Subscribers (#date(2013,1,1), #date(2017,6,3))",
+            Result = "#table({""Country code"",""day"",""video"",""views"",""likes"",""dislikes"",""shares"",""estimatedRevenue"",""comments"",""averageViewDuration"",""estimatedMinutesWatched"",""adImpressions"",""cpm"",""averageViewPercentage"",""subscribersGained"",""subscribersLost""},{
+            {""af"",""4/9/2013"",""3Qn0RA5zwxg"",""1"",""0"",""0"",""0"",""0"",""0"",""214"",""3"",""0"",""0"",""88.91244813278009"",""0"",""0""},
+            {""af"",""5/19/2013"",""pjNkqvuisbo"",""2"",""0"",""0"",""0"",""0"",""0"",""2"",""0"",""0"",""0"",""0.6909214092140921"",""0"",""0""},
+            {""af"",""11/26/2013"",""QZXB9dB8SlA"",""1"",""0"",""0"",""0"",""0"",""0"",""29"",""0"",""0"",""0"",""6.5988687782805435"",""0"",""0""},
+            {""af"",""2/9/2014"",""HMg0sWFZym4"",""1"",""0"",""0"",""0"",""0"",""0"",""14"",""0"",""0"",""0"",""4.46969696969697"",""0"",""0""}})"
+        ]}
+    ]
+;
+
+VideoStats = ( optional StartDate as date, optional EndDate as date)  =>
   let
       channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
    VidsBaseurl = "https://www.googleapis.com/youtube/v3/search?part=id&order=date&maxResults=50&forMine=true&type=video&pageToken=",
@@ -283,7 +329,31 @@ in
     result;
 
 [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional EndDate as date) =>
+shared YoutubeAnalytics.DailySubscribers  = Value.ReplaceType(DailySubscribers, DailySubscribersType);
+
+DailySubscribersType = type function (
+        optional StartDate as ( type date meta[
+        Documentation.FieldCaption = "Start Date",
+        Documentation.FieldDescription = "The Start Date of the report"]),
+        optional EndDate as( type date meta[
+        Documentation.FieldCaption = "End Date",
+        Documentation.FieldDescription = "The End Date of the report"]
+        )) as table meta [                  
+        Documentation.Name = "Youtube Analytics Daily Subscribers",
+        Documentation.LongDescription = "Returns a table with daily information for subscribersGained and subscribersLost within the time period provided and by country code",
+        Documentation.Examples = {[
+            Description = "Returns a table with daily information by country for subscribersGained and subscribersLost within the time period provided",
+            Code = "YoutubeAnalytics.Subscribers (#date(2017,6,1), #date(2017,6,3))",
+            Result = "#table({""Country code"",""day"",""subscribersGained"",""subscribersLost""},{
+            {""af"",""4/9/2013"",""0"",""0""},
+            {""af"",""5/19/2013"",""0"",""0""},
+            {""af"",""11/26/2013"",""0"",""0""},
+            {""af"",""2/9/2014"",""0"",""0""}})"
+        ]}
+    ]
+;
+
+DailySubscribers = (optional StartDate as date, optional EndDate as date) =>
  ///*****Data for "Subscribers lost" and "Subscribers" is not correctly tracked between August 20, 2013 and August 23, 2013
  ////*****Data for "Subscribers gained", "Subscribers lost", and "Subscribers" is not correctly tracked between January 13, 2015 and January 15, 2015.
   let
@@ -324,7 +394,7 @@ shared YoutubeAnalytics.DailySubscribers = (optional StartDate as date, optional
            if Number.From(StartDate) > Number.From(EndDate) then Error.Record("Parameters Issue","StartDate can't be after EndDate", "StartDate > EndDate") else #"Changed Type1"
 in
     result;
-
+                  
 
 [DataSource.Kind="YoutubeAnalytics"]
 YoutubeAnalytics.Countries = () as table =>
@@ -521,3 +591,14 @@ GetScopeString = (scopes as list, optional scopePrefix as text) as text =>
         asText = Text.Combine(addPrefix, " ")
     in
         asText;
+
+//// Helper function to create sample tables
+SampleTable = ( OutputTable as table) as text =>
+
+let
+    TableToTransform = Table.FirstN(OutputTable,2),        
+    Headers = Text.Combine(List.Transform(Table.ColumnNames(TableToTransform), each """"""&Text.From(_)&""""""), ","),
+    Data = Text.Combine(List.Transform(List.Transform(Table.ToRows(TableToTransform), each Text.Combine(List.Transform(_, (_)=> """"""&Text.From(_)&""""""), ",")), each "{"&_&"}"), ","),
+    Custom1 = "#table({"&Headers&"},{"&Data&"})"
+in
+    Custom1;
