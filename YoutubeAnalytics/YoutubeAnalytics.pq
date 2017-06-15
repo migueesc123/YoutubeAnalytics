@@ -440,7 +440,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
     #"Changed Type1" = Table.TransformColumnTypes(high,{{"url", type text}, {"url.1", type text}, {"url.2", type text}}),
     #"Renamed Columns" = Table.RenameColumns(#"Changed Type1",{{"url", "Default Thumbnail"}, {"url.1", "Medium Thumbnail"}, {"url.2", "High Thumbnail"}}),
     AddColumn = Table.AddColumn( #"Renamed Columns", "MyRequest", each 
-           Json.Document( Web.Contents("https://www.googleapis.com/youtube/v3/videos?id=", [RelativePath = [videoId] &"&part=contentDetails"]))),
+           Json.Document( Web.Contents("https://www.googleapis.com/youtube/v3/videos", [RelativePath = "?id=" & [videoId] &"&part=contentDetails"]))),
                #"Expanded MyRequest" = Table.ExpandRecordColumn(AddColumn, "MyRequest", {"items"}, {"items"}),
     #"Expanded items2" = Table.ExpandListColumn(#"Expanded MyRequest", "items"),
     #"Expanded items12" = Table.ExpandRecordColumn(#"Expanded items2", "items", {"contentDetails"}, {"contentDetails"}),
@@ -600,6 +600,6 @@ let
     TableToTransform = Table.FirstN(OutputTable,2),        
     Headers = Text.Combine(List.Transform(Table.ColumnNames(TableToTransform), each """"""&Text.From(_)&""""""), ","),
     Data = Text.Combine(List.Transform(List.Transform(Table.ToRows(TableToTransform), each Text.Combine(List.Transform(_, (_)=> """"""&Text.From(_)&""""""), ",")), each "{"&_&"}"), ","),
-    Custom1 = "#table({"&Headers&"},{"&Data&"})"
+    TableFormat = "#table({"&Headers&"},{"&Data&"})"
 in
-    Custom1;
+    TableFormat;
