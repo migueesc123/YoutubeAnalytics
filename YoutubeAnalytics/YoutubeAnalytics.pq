@@ -55,55 +55,60 @@ shared YoutubeAnalytics.Navigation = () =>
    
 GetReportsType = type function (
     optional PStartDate as (type date meta [ 
-        Documentation.FieldCaption = "Start Date",
-        Documentation.FieldDescription = "Start Date of the report"
+        Documentation.FieldCaption = "Start Date"
     ]),
      optional PEndDate as (type date meta [ 
-        Documentation.FieldCaption = "End Date",
-        Documentation.FieldDescription = "End Date of the report"
+        Documentation.FieldCaption = "End Date"
     ]),
      optional Pmetrics as (type text meta [
         Documentation.FieldCaption = "Metrics",
-        Documentation.FieldDescription = "Text to display",
-        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+        Documentation.SampleValues = {"views,likes,shares"}
     ]),
        optional Pcurrency as (type text meta [
         Documentation.FieldCaption = "Currency",
-        Documentation.FieldDescription = "Text to display",
-        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+        Documentation.FieldDescription = "Three-letter, ISO 4217 currency code",
+        Documentation.SampleValues = {"EUR", "USD"}
     ]),
         optional Pdimensions as (type text meta [
         Documentation.FieldCaption = "Dimensions",
-        Documentation.FieldDescription = "Text to display",
-        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+        Documentation.SampleValues = {"day,deviceType"}
     ]),
       optional Pfilters as (type text meta [
         Documentation.FieldCaption = "Filters",
-        Documentation.FieldDescription = "Text to display",
-        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+        Documentation.SampleValues = {"country==US;deviceType==MOBILE"}
     ]),
       optional Pmax_results as (type number meta [
         Documentation.FieldCaption = "Max Results"
     ]),
          optional Psort as (type text meta [
         Documentation.FieldCaption = "Sort",
-        Documentation.FieldDescription = "Text to display",
-        Documentation.SampleValues = {"Hello world", "Hola mundo"}
+        Documentation.SampleValues = {"day", "-day"}
     ]),
       optional Pstart_index as (type number meta [
         Documentation.FieldCaption = "Max Results"
     ]))
     as table meta [
-        Documentation.Name = "Hello - Name",
-        Documentation.LongDescription = "Hello - Long Description",
+        Documentation.Name = "Youtube Analytics API v1 GET data",
+        Documentation.LongDescription = "Read the full Youtube Analytics API documentation from Google and find how to construct your query here: https://developers.google.com/youtube/analytics/v1/data_model",
         Documentation.Examples = {[
-            Description = "Returns a table with 'Hello world' repeated 2 times",
-            Code = "HelloWorldWithDocs.Contents(""Hello world"", 2)",
-            Result = "#table({""Column1""}, {{""Hello world""}, {""Hello world""}})"
-        ],[
-            Description = "Another example, new message, new count!",
-            Code = "HelloWorldWithDocs.Contents(""Goodbye"", 1)",
-            Result = "#table({""Column1""}, {{""Goodbye""}})"
+            Description = "Quick query to get the views and estimatedRevenue in USD by day from June 1st, 2017 until June 3rd, 2017",
+            Code = "Check the Documentation here: https://developers.google.com/youtube/analytics/v1/data_model
+            
+            Example: 
+            YoutubeAnalytics.GETReports =  (
+             #date(2017,6,1), 
+             #date(2017,6,3), 
+             ""views,estimatedRevenue"", 
+             ""USD"", 
+             ""day"", 
+             null, 
+             null, 
+             null, 
+             null)",
+                        Result = "#table({""day"",""views"",""estimatedRevenue""}, {
+                                 {#date(2017,6,1),245,10},
+                                 {#date(2017,6,2),437,45},
+                                 {#date(2017,6,3),784,148}})"
         ]}
     ];
      
@@ -152,7 +157,7 @@ GetReportsType = type function (
          response;
 
  [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.ChannelInfo = () as table =>
+YoutubeAnalytics.ChannelInfo = () as table =>
 let
     Source = Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=snippet,statistics"),
     #"Imported JSON" = Json.Document(Source),
@@ -311,7 +316,7 @@ in
 
 
 [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.Countries = () as table =>
+YoutubeAnalytics.Countries = () as table =>
  let
     Source= Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("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", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type text) meta [Serialized.Text = true]) in type table [Country = _t, #"Country code" = _t]),
     #"Changed Type" = Table.TransformColumnTypes(Source,{{"Country", type text}, {"Country code", type text}})
@@ -319,7 +324,7 @@ in
     #"Changed Type";
     
 [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.Videos = () as table =>
+ YoutubeAnalytics.Videos = () as table =>
 let
     ///Code originally created by Imke http://www.thebiccountant.com/
     Baseurl = "https://www.googleapis.com/youtube/v3/search?part=snippet,id&order=date&maxResults=50&forMine=true&type=video&pageToken=",
@@ -363,7 +368,7 @@ in
     #"Changed Type12";
  
  [DataSource.Kind="YoutubeAnalytics"]
-shared YoutubeAnalytics.Subscribers = () =>
+ YoutubeAnalytics.Subscribers = () =>
 let
     ///Code originally created by Imke http://www.thebiccountant.com/
     Baseurl = "https://www.googleapis.com/youtube/v3/subscriptions?part=subscriberSnippet&maxResults=50&mySubscribers=true&pageToken=",
