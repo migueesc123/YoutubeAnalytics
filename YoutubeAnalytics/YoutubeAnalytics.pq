@@ -284,7 +284,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
      AddingSetofVideos = Table.AddColumn(AddingCountriesColumn, "VideoIDs", each setofVideos),
      BeforeMakingTheCall = Table.ExpandListColumn(AddingSetofVideos,  "VideoIDs"),
     #"Added Custom" =  Table.AddColumn( BeforeMakingTheCall , "Response", 
-             each  Json.Document(
+             each  try Json.Document(
                      Web.Contents( requesturl, 
                      [RelativePath = "?" & Uri.BuildQueryString([
        ids = "channel==" & channel_id,   
@@ -296,7 +296,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
          "cpm","averageViewPercentage","subscribersGained","subscribersLost"}, Text.From), ","),
         dimensions="day,video",
         filters = "video=="&[VideoIDs]&";country=="&[Country code]    
-    ])]))),
+    ])])) otherwise null),
     removingHelperColumn = Table.RemoveColumns ( #"Added Custom", {"VideoIDs"}),  
     columnHeaders = List.Buffer( Table.FromRecords(removingHelperColumn{0}[Response][columnHeaders])[name]),
     DataInLists = Table.ExpandListColumn( Table.SelectRows(Table.ExpandRecordColumn(removingHelperColumn, "Response", {"rows"}, {"rows"}), each [rows] <> null),  "rows"), 
