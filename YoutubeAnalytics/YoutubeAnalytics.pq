@@ -225,8 +225,12 @@ VideoStatsType = type function (
         Documentation.FieldDescription = "The Start Date of the report"]),
         optional EndDate as( type date meta[
         Documentation.FieldCaption = "End Date",
-        Documentation.FieldDescription = "The End Date of the report"]
-        )) as table meta [                  
+        Documentation.FieldDescription = "The End Date of the report"]),
+        optional Partnership as( type logical meta [
+        Documentation.FieldCaption = "Are you a Partner?",
+        Documentation.FieldDescription = "If you are a Partner then choose true",
+        Documentation.AllowedValues = { true, false }])) 
+        as table meta [                  
         Documentation.Name = "Youtube Analytics Daily Video Activity by Country",
         Documentation.LongDescription = "Returns a table with daily information by country and video for views,likes,dislikes,shares,estimatedRevenue,comments,
          averageViewDuration,estimatedMinutesWatched,adImpressions,cpm,averageViewPercentage,subscribersGained, and subscribersLost",
@@ -243,11 +247,15 @@ VideoStatsType = type function (
     ]
 ;
 
-VideoStats = ( optional StartDate as date, optional EndDate as date)  =>
+VideoStats = ( optional StartDate as date, optional EndDate as date, optional Partnership as logical)  =>
   let
       channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
    VidsBaseurl = "https://www.googleapis.com/youtube/v3/search?part=id&order=date&maxResults=50&forMine=true&type=video&pageToken=",
     requesturl = "https://www.googleapis.com/youtube/analytics/v1/reports",
+    monetaryMetrics = {"estimatedRevenue","adImpressions","cpm"},
+    regularMetrics = {"views","likes","dislikes","shares","comments","averageViewDuration","estimatedMinutesWatched",
+                    "averageViewPercentage","subscribersGained","subscribersLost"},
+    metricsToGET = if Partnership = true or Partnership = null  then List.Combine( {monetaryMetrics, regularMetrics}) else regularMetrics,
     Source = List.Generate( ()=> 
      [Result = null , nextPageToken =null, prevPageToken= null, Counter = 0], 
 each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 , 
@@ -290,10 +298,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
        ids = "channel==" & channel_id,   
         #"start-date" = Start,
        #"end-date" = End,
-        metrics = Text.Combine( List.Transform(
-         {"views","likes","dislikes","shares","estimatedRevenue","comments",
-         "averageViewDuration","estimatedMinutesWatched","adImpressions",
-         "cpm","averageViewPercentage","subscribersGained","subscribersLost"}, Text.From), ","),
+        metrics = Text.Combine( List.Transform( metricsToGET, Text.From), ","),
         dimensions="day,video",
         filters = "video=="&[VideoIDs]&";country=="&[Country code]    
     ])])) otherwise null),
@@ -303,7 +308,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
     DatainRecords = Table.AddColumn(DataInLists, "Custom", each Record.FromList( [rows], columnHeaders)),
     RemovingDataInList = Table.RemoveColumns(DatainRecords,{"rows"}),
     DataInTable = Table.ExpandRecordColumn(RemovingDataInList, "Custom", columnHeaders),
-    OutputTable = Table.TransformColumnTypes(DataInTable,
+    OutputTable =  Table.TransformColumnTypes(DataInTable,  if Partnership = true or Partnership = null then
       {{"comments", Int64.Type}, 
        {"shares", Int64.Type}, 
        {"dislikes", Int64.Type}, 
@@ -316,6 +321,19 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
        {"estimatedMinutesWatched", type number},
        {"adImpressions", type number},
        {"cpm", type number},
+       {"averageViewPercentage", type number},
+       {"subscribersGained", type number},
+       {"subscribersLost", type number}} 
+       else
+       {{"comments", Int64.Type}, 
+       {"shares", Int64.Type}, 
+       {"dislikes", Int64.Type}, 
+       {"likes", Int64.Type}, 
+       {"views", Int64.Type},  
+       {"video", type text}, 
+       {"day", type date},
+       {"averageViewDuration", type number},
+       {"estimatedMinutesWatched", type number},
        {"averageViewPercentage", type number},
        {"subscribersGained", type number},
        {"subscribersLost", type number}}),
