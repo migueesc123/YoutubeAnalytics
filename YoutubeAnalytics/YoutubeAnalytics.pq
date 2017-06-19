@@ -424,7 +424,7 @@ in
     #"Changed Type";
     
 [DataSource.Kind="YoutubeAnalytics"]
- shared YoutubeAnalytics.Videos = () as table =>
+YoutubeAnalytics.Videos = () as table =>
 let
     ///Code originally created by Imke http://www.thebiccountant.com/
     Baseurl = "https://www.googleapis.com/youtube/v3/search?part=snippet,id&order=date&maxResults=50&forMine=true&type=video",
