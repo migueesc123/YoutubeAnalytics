@@ -265,7 +265,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
              VidsBaseurl)) 
     else Json.Document(
              Web.Contents(
-            VidsBaseurl, [RelativePath = [nextPageToken]])), 
+            VidsBaseurl,  [ Query  = [pageToken=Text.From( [nextPageToken]) ]])), 
   nextPageToken = try Result[nextPageToken] otherwise null, 
  prevPageToken = try Result[prevPageToken] otherwise null,
     Counter = [Counter] + 1 ], each [Result]),
@@ -424,10 +424,10 @@ in
     #"Changed Type";
     
 [DataSource.Kind="YoutubeAnalytics"]
- YoutubeAnalytics.Videos = () as table =>
+ shared YoutubeAnalytics.Videos = () as table =>
 let
     ///Code originally created by Imke http://www.thebiccountant.com/
-    Baseurl = "https://www.googleapis.com/youtube/v3/search?part=snippet,id&order=date&maxResults=50&forMine=true&type=video&pageToken=",
+    Baseurl = "https://www.googleapis.com/youtube/v3/search?part=snippet,id&order=date&maxResults=50&forMine=true&type=video",
     Source = List.Generate( ()=> 
      [Result = null , nextPageToken =null, prevPageToken= null, Counter = 0], 
 each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 , 
@@ -437,7 +437,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
              Baseurl)) 
     else Json.Document(
              Web.Contents(
-            Baseurl, [RelativePath = [nextPageToken]])), 
+            Baseurl, [ Query  = [pageToken=Text.From( [nextPageToken]) ]])), 
   nextPageToken = try Result[nextPageToken] otherwise null, 
  prevPageToken = try Result[prevPageToken] otherwise null,
     Counter = [Counter] + 1 ], each [Result]),
