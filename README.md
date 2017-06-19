@@ -22,8 +22,9 @@ With the new version of the Power BI Desktop you're now able to add a custom dat
 Once you have the API Project in place and also the Custom Connectors folders, you can now download the *.mez* file and modify it with your Google API Project credentials. This next video will show you how to do that.
 [![Installing a Custom Connectors](https://i.ytimg.com/vi/G-NRovNEE0w/mqdefault.jpg)](https://www.youtube.com/watch?v=G-NRovNEE0w)
 
-# Step 4: Test it out and provide feedback!
-Go ahead and test it out! If you have any issues with it, please create an issue in this repo or leave a comment in any of the videos of this series. Let me know what you think of the connector.
+# Step 4: Get the Power BI Template for this connector
+This is a simple report with the Data Model in place, a few measures, all queries set up correctly, and 3 reports to give you a jumpstart to analyze your youtube data. Feel free to modify the report or provide any type of suggestions or modifications to it. This next video will show you how to get started with the Youtube Analytics Power BI Template.
+[![Using the Power BI Template](https://i.ytimg.com/vi/WO4dZB3i7fw/mqdefault.jpg)](https://www.youtube.com/watch?v=WO4dZB3i7fw)
 
-# Coming Soon
-A Power BI report template is on its way. Stay tuned... 
+# Step 5: Provide Feedback!
+Go ahead and test out the connector and the template! If you have any issues with it, please create an issue in this repo or leave a comment in any of the videos of this series. Let me know what you think.
