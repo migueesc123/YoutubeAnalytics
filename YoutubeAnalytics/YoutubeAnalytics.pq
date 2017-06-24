@@ -167,8 +167,8 @@ GetReportsType = type function (
  
  GETPublicDataType = type function (
         optional path as ( type text meta[
-        Documentation.FieldCaption = "End Date",
-        Documentation.FieldDescription = "The End Date of the report"]
+        Documentation.FieldCaption = "url Path",
+        Documentation.FieldDescription = "Text string to be added to the https://www.googleapis.com/youtube/v3/"]
         )) as table meta [                  
         Documentation.Name = "YoutubeAnalytics.GETPublicData",
         Documentation.LongDescription = "Makes a call to the Youtube Data API and returns the raw response",
