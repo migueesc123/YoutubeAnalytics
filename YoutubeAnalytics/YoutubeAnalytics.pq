@@ -469,6 +469,7 @@ in
  
 // Data Source Kind description
 YoutubeAnalytics = [
+ TestConnection = (dataSourcePath) =>  { "YoutubeAnalytics.Navigation" },
     Authentication = [
         OAuth = [
             StartLogin = StartLogin,
