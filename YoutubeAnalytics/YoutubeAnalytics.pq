@@ -140,16 +140,16 @@ GetReportsType = type function (
        Start = Date.ToText ( PStartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( PEndDate, "yyyy-MM-dd"),
      channel_id = Json.Document( Web.Contents( "https://www.googleapis.com/youtube/v3/channels?mine=true&part=id" ) ) [items] {0} [id],
-    requesturl = "https://www.googleapis.com/youtube/analytics/v1/reports",
+    requesturl = "https://youtubeanalytics.googleapis.com/v2/reports",
     GETInfo= [ 
         ids = "channel==" & channel_id,
-        #"start-date" = Start,
-       #"end-date" = End,
+        startDate = Start,
+        endDate = End,
         metrics = Pmetrics,
         currency = Pcurrency,
         dimensions=Pdimensions,
         filters= Pfilters,
-        #"max-results"= Number.ToText( Pmax_results ),
+         maxResults= Number.ToText( Pmax_results ),
         sort = Psort,
         #"start-index"= Number.ToText( Pstart_index )],
     CleanedRecord = Record.RemoveFields( GETInfo,  Table.SelectRows( Record.ToTable ( GETInfo), each ([Value] = null))[Name]),
@@ -251,7 +251,7 @@ VideoStats = ( optional StartDate as date, optional EndDate as date, optional Pa
   let
       channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
    VidsBaseurl = "https://www.googleapis.com/youtube/v3/search?part=id&order=date&maxResults=50&forMine=true&type=video&pageToken=",
-    requesturl = "https://www.googleapis.com/youtube/analytics/v1/reports",
+    requesturl = "https://youtubeanalytics.googleapis.com/v2/reports",
     monetaryMetrics = {"estimatedRevenue","adImpressions","cpm"},
     regularMetrics = {"views","likes","dislikes","shares","comments","averageViewDuration","estimatedMinutesWatched",
                     "averageViewPercentage","subscribersGained","subscribersLost"},
@@ -296,8 +296,8 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
                      Web.Contents( requesturl, 
                      [RelativePath = "?" & Uri.BuildQueryString([
        ids = "channel==" & channel_id,   
-        #"start-date" = Start,
-       #"end-date" = End,
+        startDate = Start,
+       endDate = End,
         metrics = Text.Combine( List.Transform( metricsToGET, Text.From), ","),
         dimensions="day,video",
         filters = "video=="&[VideoIDs]&";country=="&[Country code]    
@@ -345,7 +345,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
            if EndDate = null then Error.Record("Parameters Issue", "EndDate can not be null", "EndDate = null") else
            if Number.From(StartDate) > Number.From(EndDate) then Error.Record("Parameters Issue","StartDate can't be after EndDate", "StartDate > EndDate") else OutputTable
 in
-    result;
+    Table.RemoveRowsWithErrors(result, {"day"});
 
 [DataSource.Kind="YoutubeAnalytics"]
 shared YoutubeAnalytics.DailySubscribers  = Value.ReplaceType(DailySubscribers, DailySubscribersType);
@@ -377,42 +377,36 @@ DailySubscribers = (optional StartDate as date, optional EndDate as date) =>
  ////*****Data for "Subscribers gained", "Subscribers lost", and "Subscribers" is not correctly tracked between January 13, 2015 and January 15, 2015.
   let
       channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
-          requesturl = "https://www.googleapis.com/youtube/analytics/v1/reports",
+          requesturl = "https://youtubeanalytics.googleapis.com/v2/reports",
       Start = Date.ToText ( StartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( EndDate, "yyyy-MM-dd"),
     #"Added Custom" =  Table.AddColumn(Table.TransformColumns(Table.SelectColumns(YoutubeAnalytics.Countries(),{"Country code"}),{},Text.Lower) , "Response", 
              each Json.Document(
                      Web.Contents( requesturl, [RelativePath = "?" & Uri.BuildQueryString([
        ids = "channel==" & channel_id,   
-        #"start-date" = Start,
-       #"end-date" = End,
+        startDate = Start,
+       endDate = End,
         metrics = Text.Combine( List.Transform(
          {"subscribersGained","subscribersLost"}, Text.From), ","),
         dimensions="day",
         filters = "country=="&[Country code]    
     ])]))),
+    #"Expanded Response" = Table.ExpandRecordColumn(  #"Added Custom", "Response", {"rows"}, {"rows"}),
+    #"Expanded rows" = Table.ExpandListColumn(#"Expanded Response", "rows"),
+    #"Filtered Rows" = Table.SelectRows(#"Expanded rows", each [rows] <> null and [rows] <> ""),
+    #"Added Custom1" = Table.AddColumn(#"Filtered Rows", "Custom", each Table.Transpose(Table.FromList([rows], Splitter.SplitByNothing(), null, null, ExtraValues.Error))),
+    #"Removed Columns" = Table.RemoveColumns(#"Added Custom1",{"rows"}),
+    #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns", "Custom", {"Column1", "Column2", "Column3"}, {"Column1", "Column2", "Column3"}),
+    #"Renamed Columns" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "day"}, {"Column2", "subscribersGained"}, {"Column3", "subscribersLost"}}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Renamed Columns",{{"subscribersGained", Int64.Type}, {"subscribersLost", Int64.Type}, {"day", type date}}),
 ///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets
- responseColumnHeaders = Table.ExpandRecordColumn ( Table.FromList(#"Added Custom"[Response]{0}[columnHeaders],Splitter.SplitByNothing(), null, null, ExtraValues.Error),  "Column1", {"name", "columnType", "dataType"}),
- responseColumnNames = responseColumnHeaders[name],
-#"Expanded Custom.1" = Table.ExpandRecordColumn(#"Added Custom", "Response", {"rows"}, {"rows"}),
-    #"Filtered Rows1" = Table.SelectRows(#"Expanded Custom.1", each [rows] <> null),
-    #"Expanded rows" = Table.ExpandListColumn(#"Filtered Rows1", "rows"),
-    #"Added Custom2" = Table.AddColumn(#"Expanded rows", "Custom", each Table.Transpose(Table.FromList([rows], Splitter.SplitByNothing()))),
-    #"Removed Columns2" = Table.RemoveColumns(#"Added Custom2",{"rows"}),
-    ColumnsToExpand = Table.ColumnNames(#"Removed Columns2"[Custom]{0}),
-    #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns2", "Custom", 
-    ColumnsToExpand, 
-    responseColumnNames),
-      #"Changed Type1" = Table.TransformColumnTypes(#"Expanded Custom",
-      {{"day", type date},
-       {"subscribersGained", type number},
-       {"subscribersLost", type number}}),
+ 
     result = if StartDate = null  and EndDate =null then Error.Record("Parameters Issue", "StartDate and EndDate can not be null", "StartDate = null & EndDate = null") else 
            if StartDate = null then Error.Record("Parameters Issue", "StartDate can not be null", "StartDate = null") else 
            if EndDate = null then Error.Record("Parameters Issue", "EndDate can not be null", "EndDate = null") else
-           if Number.From(StartDate) > Number.From(EndDate) then Error.Record("Parameters Issue","StartDate can't be after EndDate", "StartDate > EndDate") else #"Changed Type1"
+           if Number.From(StartDate) > Number.From(EndDate) then Error.Record("Parameters Issue","StartDate can't be after EndDate", "StartDate > EndDate") else  #"Changed Type" 
 in
-    result;
+   result;
                   
 
 [DataSource.Kind="YoutubeAnalytics"]
