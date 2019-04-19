@@ -229,9 +229,13 @@ VideoStatsType = type function (
         optional Partnership as( type logical meta [
         Documentation.FieldCaption = "Are you a Partner?",
         Documentation.FieldDescription = "If you are a Partner then choose true",
+        Documentation.AllowedValues = { true, false }]),
+        optional CountryBreakdown as (type logical meta[
+        Documentation.FieldCaption = "Country Breakdown",
+        Documentation.FieldDescription = "Do you require a Country breakdown?",
         Documentation.AllowedValues = { true, false }])) 
         as table meta [                  
-        Documentation.Name = "Youtube Analytics Daily Video Activity by Country",
+        Documentation.Name = "Youtube Analytics Daily Video Activity by Country and/or Date",
         Documentation.LongDescription = "Returns a table with daily information by country and video for views,likes,dislikes,shares,estimatedRevenue,comments,
          averageViewDuration,estimatedMinutesWatched,adImpressions,cpm,averageViewPercentage,subscribersGained, and subscribersLost",
         Documentation.Examples = {[
@@ -247,7 +251,7 @@ VideoStatsType = type function (
     ]
 ;
 
-VideoStats = ( optional StartDate as date, optional EndDate as date, optional Partnership as logical)  =>
+VideoStats = ( optional StartDate as date, optional EndDate as date, optional Partnership as logical, optional CountryBreakdown as logical)  =>
   let
       channel_id = Json.Document(Web.Contents("https://www.googleapis.com/youtube/v3/channels?mine=true&part=id"))[items]{0}[id],
    VidsBaseurl = "https://www.googleapis.com/youtube/v3/search?part=id&order=date&maxResults=50&forMine=true&type=video&pageToken=",
@@ -287,7 +291,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
                 Offset = [Offset] + 200], each [Result]),
       Start = Date.ToText ( StartDate, "yyyy-MM-dd"),
       End =  Date.ToText ( EndDate, "yyyy-MM-dd"),
-     videos = Text.Combine(List.Transform(VideoList, Text.From), ","),
+     /////// IF Country Breakdown is requested, then the following code will be executed////
      AddingCountriesColumn = Table.TransformColumns(Table.SelectColumns(YoutubeAnalytics.Countries(),{"Country code"}),{},Text.Lower),
      AddingSetofVideos = Table.AddColumn(AddingCountriesColumn, "VideoIDs", each setofVideos),
      BeforeMakingTheCall = Table.ExpandListColumn(AddingSetofVideos,  "VideoIDs"),
@@ -303,11 +307,23 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
         filters = "video=="&[VideoIDs]&";country=="&[Country code]    
     ])])) otherwise null),
     removingHelperColumn = Table.RemoveColumns ( #"Added Custom", {"VideoIDs"}),  
-    columnHeaders = List.Buffer( Table.FromRecords(removingHelperColumn{0}[Response][columnHeaders])[name]),
+    /// IF Country Breakdown is NOT requested, then the following code will be executed////
+     CallsWithouCountryBreakdown = List.Transform ( setofVideos, (_) => try Json.Document(
+                     Web.Contents( requesturl, 
+                     [RelativePath = "?" & Uri.BuildQueryString([
+       ids = "channel==" & channel_id,   
+        startDate = Start,
+       endDate = End,
+        metrics = Text.Combine( List.Transform( metricsToGET, Text.From), ","),
+        dimensions="day,video",
+        filters = "video=="& _    
+    ])])) otherwise null),
+    ///////////// Global expand operation 
+    columnHeaders = if CountryBreakdown = false then  List.Buffer( Table.FromRecords( CallsWithouCountryBreakdown{0}[columnHeaders])[name]) else List.Buffer( Table.FromRecords(removingHelperColumn{0}[Response][columnHeaders])[name]),
     DataInLists = Table.ExpandListColumn( Table.SelectRows(Table.ExpandRecordColumn(removingHelperColumn, "Response", {"rows"}, {"rows"}), each [rows] <> null),  "rows"), 
-    DatainRecords = Table.AddColumn(DataInLists, "Custom", each Record.FromList( [rows], columnHeaders)),
+    DatainRecords = if CountryBreakdown = false then List.Transform( List.Combine(List.Transform( CallsWithouCountryBreakdown, each [rows])), (_) => Record.FromList(_,  columnHeaders) ) else Table.AddColumn(DataInLists, "Custom", each Record.FromList( [rows], columnHeaders)),
     RemovingDataInList = Table.RemoveColumns(DatainRecords,{"rows"}),
-    DataInTable = Table.ExpandRecordColumn(RemovingDataInList, "Custom", columnHeaders),
+    DataInTable = if CountryBreakdown = false then  Table.FromRecords(DatainRecords) else Table.ExpandRecordColumn(RemovingDataInList, "Custom", columnHeaders),
     OutputTable =  Table.TransformColumnTypes(DataInTable,  if Partnership = true or Partnership = null then
       {{"comments", Int64.Type}, 
        {"shares", Int64.Type}, 
@@ -337,6 +353,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
        {"averageViewPercentage", type number},
        {"subscribersGained", type number},
        {"subscribersLost", type number}}),
+////
 
 ///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets
 
@@ -345,7 +362,7 @@ each [nextPageToken] <> null or [prevPageToken] <> null  or [Counter] <= 1 ,
            if EndDate = null then Error.Record("Parameters Issue", "EndDate can not be null", "EndDate = null") else
            if Number.From(StartDate) > Number.From(EndDate) then Error.Record("Parameters Issue","StartDate can't be after EndDate", "StartDate > EndDate") else OutputTable
 in
-    Table.RemoveRowsWithErrors(result, {"day"});
+    Table.RemoveRowsWithErrors( result, {"day"});
 
 [DataSource.Kind="YoutubeAnalytics"]
 shared YoutubeAnalytics.DailySubscribers  = Value.ReplaceType(DailySubscribers, DailySubscribersType);
