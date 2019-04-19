@@ -98,7 +98,7 @@ GetReportsType = type function (
         Documentation.SampleValues = {"day", "-day"}
     ]),
       optional Pstart_index as (type number meta [
-        Documentation.FieldCaption = "Max Results"
+        Documentation.FieldCaption = "Start Index"
     ]))
     as table meta [
         Documentation.Name = "Youtube Analytics API v1 GET data",
@@ -373,8 +373,12 @@ DailySubscribersType = type function (
         Documentation.FieldDescription = "The Start Date of the report"]),
         optional EndDate as( type date meta[
         Documentation.FieldCaption = "End Date",
-        Documentation.FieldDescription = "The End Date of the report"]
-        )) as table meta [                  
+        Documentation.FieldDescription = "The End Date of the report"]),
+        optional CountryBreakdown as (type logical meta[
+        Documentation.FieldCaption = "Country Breakdown",
+        Documentation.FieldDescription = "Do you require a Country breakdown?",
+        Documentation.AllowedValues = { true, false }])) 
+        as table meta [                  
         Documentation.Name = "Youtube Analytics Daily Subscribers",
         Documentation.LongDescription = "Returns a table with daily information for subscribersGained and subscribersLost within the time period provided and by country code",
         Documentation.Examples = {[
@@ -389,7 +393,7 @@ DailySubscribersType = type function (
     ]
 ;
 
-DailySubscribers = (optional StartDate as date, optional EndDate as date) =>
+DailySubscribers = (optional StartDate as date, optional EndDate as date, optional CountryBreakdown as logical) =>
  ///*****Data for "Subscribers lost" and "Subscribers" is not correctly tracked between August 20, 2013 and August 23, 2013
  ////*****Data for "Subscribers gained", "Subscribers lost", and "Subscribers" is not correctly tracked between January 13, 2015 and January 15, 2015.
   let
@@ -415,8 +419,9 @@ DailySubscribers = (optional StartDate as date, optional EndDate as date) =>
     #"Removed Columns" = Table.RemoveColumns(#"Added Custom1",{"rows"}),
     #"Expanded Custom" = Table.ExpandTableColumn(#"Removed Columns", "Custom", {"Column1", "Column2", "Column3"}, {"Column1", "Column2", "Column3"}),
     #"Renamed Columns" = Table.RenameColumns(#"Expanded Custom",{{"Column1", "day"}, {"Column2", "subscribersGained"}, {"Column3", "subscribersLost"}}),
-    #"Changed Type" = Table.TransformColumnTypes(#"Renamed Columns",{{"subscribersGained", Int64.Type}, {"subscribersLost", Int64.Type}, {"day", type date}}),
 ///Information about the metrics that are used https://developers.google.com/youtube/analytics/v1/dimsmets/mets
+   CallWithouCountryBreakdown = GetReports(StartDate, EndDate, "subscribersGained,subscribersLost", null, "day"),
+         #"Changed Type" = Table.TransformColumnTypes(if CountryBreakdown = false then CallWithouCountryBreakdown else #"Renamed Columns",{{"subscribersGained", Int64.Type}, {"subscribersLost", Int64.Type}, {"day", type date}}),
  
     result = if StartDate = null  and EndDate =null then Error.Record("Parameters Issue", "StartDate and EndDate can not be null", "StartDate = null & EndDate = null") else 
            if StartDate = null then Error.Record("Parameters Issue", "StartDate can not be null", "StartDate = null") else 
