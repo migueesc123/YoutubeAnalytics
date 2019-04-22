@@ -30,4 +30,5 @@ This is a simple report with the Data Model in place, a few measures, all querie
 Go ahead and test out the connector and the template! If you have any issues with it, please create an issue in this repo or leave a comment in any of the videos of this series. Let me know what you think.
 
 # Update Log
-2019-04-21 Added a new parameter to the Daily Video Stats and Daily Subscribers functions called "Country Breakdown" which, by default, is set to 'true' for backwards compatibility, but it can be changed to 'false' so these functions only retrieve a daily summary data instead of having a daily breakdown by country for each dataset.   
+| Date | Description |
+| 2019-04-21 | Added a new parameter to the Daily Video Stats and Daily Subscribers functions called "Country Breakdown" which, by default, is set to 'true' for backwards compatibility, but it can be changed to 'false' so these functions only retrieve a daily summary data instead of having a daily breakdown by country for each dataset. |
