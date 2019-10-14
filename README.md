@@ -13,6 +13,12 @@ In order to use this connector, you'll need to create your own Google API Projec
 Be sure to check out the following video on how to create that project and how to get the credentials needed.  
 [![Google API Project](https://i.ytimg.com/vi/6r8hrDHUv6s/mqdefault.jpg)](https://www.youtube.com/watch?v=6r8hrDHUv6s) 
 
+Make sure that the following scopes are enabled on your apps:
+- yt-analytics-monetary.readonly 
+- yt-analytics.readonly  
+- youtube.readonly
+
+
 # Step 2: Enable the 'Custom Connector' Preview feature in Power BI Desktop
 With the new version of the Power BI Desktop you're now able to add a custom data connector way easier than before. With just a few clicks and creating a few folders you're good to go. Be sure to check out the next video on how to enable this feature and set up your folder where you'll place the custom connector.
 
