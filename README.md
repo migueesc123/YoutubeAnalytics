@@ -8,6 +8,9 @@ The vision:
 
 Check on the images of the steps below for a step by step walkthrough on how to get this connector working for you.
 
+# Looking for help? 
+We offer paid support for anyone looking for help with any Google API application setup or customizations to the Custom Connector.  Contact us at info@poweredsolutions.co for more information.
+
 # Step 1: Creating your own Google API project
 In order to use this connector, you'll need to create your own Google API Project that will host your specific API credentials. 
 Be sure to check out the following video on how to create that project and how to get the credentials needed.  
