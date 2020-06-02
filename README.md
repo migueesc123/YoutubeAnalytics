@@ -8,6 +8,8 @@ The vision:
 
 Check on the images of the steps below for a step by step walkthrough on how to get this connector working for you.
 
+**Note** : Unfortunately, Google has implemented some changes to the way that their Web App works and how it handles authentication that have left the documentation on this repo regarding the creation of the WebApp outdated. The Custom Connector still works and does have everything needed to query the data from the REST API, but I'm unable to provide documentation on how to create the Web app. For that, I'd encourage you to follow the tutorials from Google / YouTube themselves regarding the best way to create a web app for their OAuth as mentioned here (https://support.google.com/cloud/answer/6158849?hl=en).
+
 # Step 1: Creating your own Google API project
 In order to use this connector, you'll need to create your own Google API Project that will host your specific API credentials. 
 Be sure to check out the following video on how to create that project and how to get the credentials needed.  
