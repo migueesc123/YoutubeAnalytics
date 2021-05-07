@@ -41,6 +41,3 @@ Go ahead and test out the connector and the template! If you have any issues wit
 | Date | Description |
 | -------- | --- |
 | 2019-04-21 | Added a new parameter to the Daily Video Stats and Daily Subscribers functions called "Country Breakdown" which, by default, is set to 'true' for backwards compatibility, but it can be changed to 'false' so these functions only retrieve a daily summary data instead of having a daily breakdown by country for each dataset. |
-
-# Looking for help? 
-We offer paid support for anyone looking for help with any Google API application setup or customizations to the Custom Connector.  Contact us at info@poweredsolutions.co for more information.
